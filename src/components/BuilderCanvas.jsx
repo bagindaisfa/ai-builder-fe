@@ -9,7 +9,7 @@ import ReactFlow, {
   Panel,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { Button, Space, Card, Typography, Drawer, Divider, Tooltip, Input, List, Avatar, Spin } from "antd";
+import { Button, Space, Card, Typography, Drawer, Divider, Tooltip, Input, List, Avatar, Spin, Switch, Select, Slider } from "antd";
 import { 
   PlusOutlined, 
   DownloadOutlined, 
@@ -92,9 +92,26 @@ const nodeTypes = [
 export default function BuilderCanvas() {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
+  const [settingsVisible, setSettingsVisible] = useState(false);
+  const [nodeSettingsVisible, setNodeSettingsVisible] = useState(false);
+  const [selectedNode, setSelectedNode] = useState(null);
   const [testInput, setTestInput] = useState("");
   const [testMessages, setTestMessages] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
+  
+  // Settings state
+  const [settings, setSettings] = useState({
+    autoSave: true,
+    snapToGrid: false,
+    showMiniMap: true,
+    showBackground: true,
+    backgroundType: 'dots', // 'dots', 'lines', 'cross'
+    nodeSpacing: 150,
+    edgeType: 'default', // 'default', 'straight', 'step', 'smoothstep'
+    theme: 'light', // 'light', 'dark'
+    showNodeLabels: true,
+    enableAnimations: true
+  });
   
   const initialNodes = [
     {
@@ -232,6 +249,51 @@ export default function BuilderCanvas() {
     setTestMessages([]);
   };
 
+  const updateSetting = (key, value) => {
+    setSettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  const resetSettings = () => {
+    setSettings({
+      autoSave: true,
+      snapToGrid: false,
+      showMiniMap: true,
+      showBackground: true,
+      backgroundType: 'dots',
+      nodeSpacing: 150,
+      edgeType: 'default',
+      theme: 'light',
+      showNodeLabels: true,
+      enableAnimations: true
+    });
+  };
+
+  const onNodeClick = (event, node) => {
+    setSelectedNode(node);
+    setNodeSettingsVisible(true);
+  };
+
+  const updateNodeData = (nodeId, newData) => {
+    setNodes((nds) =>
+      nds.map((node) =>
+        node.id === nodeId
+          ? { ...node, data: { ...node.data, ...newData } }
+          : node
+      )
+    );
+    
+    // Update selectedNode if it's the same node being updated
+    if (selectedNode && selectedNode.id === nodeId) {
+      setSelectedNode(prev => ({
+        ...prev,
+        data: { ...prev.data, ...newData }
+      }));
+    }
+  };
+
   return (
     <div style={{ 
       height: "100%", 
@@ -271,7 +333,12 @@ export default function BuilderCanvas() {
           </Button>
         </div>
         <Space>
-          <Button icon={<SettingOutlined />}>Settings</Button>
+          <Button 
+            icon={<SettingOutlined />}
+            onClick={() => setSettingsVisible(true)}
+          >
+            Settings
+          </Button>
           <Button 
             icon={<EyeOutlined />} 
             onClick={() => setPreviewVisible(!previewVisible)}
@@ -299,6 +366,7 @@ export default function BuilderCanvas() {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onNodeClick={onNodeClick}
           onDrop={onDrop}
           onDragOver={onDragOver}
           fitView
@@ -599,6 +667,431 @@ export default function BuilderCanvas() {
             </div>
           </div>
         ))}
+      </Drawer>
+
+      {/* Settings drawer */}
+      <Drawer
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <SettingOutlined style={{ color: "#1890ff" }} />
+            <span>Workflow Settings</span>
+          </div>
+        }
+        placement="right"
+        onClose={() => setSettingsVisible(false)}
+        open={settingsVisible}
+        width={400}
+        bodyStyle={{ padding: "16px" }}
+        extra={
+          <Button size="small" onClick={resetSettings}>
+            Reset to Default
+          </Button>
+        }
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          {/* General Settings */}
+          <div>
+            <Title level={5} style={{ marginBottom: "16px", color: "#262626" }}>
+              General
+            </Title>
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <Text strong>Auto Save</Text>
+                  <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                    Automatically save workflow changes
+                  </div>
+                </div>
+                <Switch
+                  checked={settings.autoSave}
+                  onChange={(checked) => updateSetting('autoSave', checked)}
+                />
+              </div>
+              
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <Text strong>Snap to Grid</Text>
+                  <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                    Align nodes to grid when moving
+                  </div>
+                </div>
+                <Switch
+                  checked={settings.snapToGrid}
+                  onChange={(checked) => updateSetting('snapToGrid', checked)}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <Text strong>Show Node Labels</Text>
+                  <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                    Display labels on workflow nodes
+                  </div>
+                </div>
+                <Switch
+                  checked={settings.showNodeLabels}
+                  onChange={(checked) => updateSetting('showNodeLabels', checked)}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <Text strong>Enable Animations</Text>
+                  <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                    Smooth transitions and animations
+                  </div>
+                </div>
+                <Switch
+                  checked={settings.enableAnimations}
+                  onChange={(checked) => updateSetting('enableAnimations', checked)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Canvas Settings */}
+          <div>
+            <Title level={5} style={{ marginBottom: "16px", color: "#262626" }}>
+              Canvas
+            </Title>
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <Text strong>Show Mini Map</Text>
+                  <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                    Display navigation mini map
+                  </div>
+                </div>
+                <Switch
+                  checked={settings.showMiniMap}
+                  onChange={(checked) => updateSetting('showMiniMap', checked)}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <Text strong>Show Background</Text>
+                  <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                    Display canvas background pattern
+                  </div>
+                </div>
+                <Switch
+                  checked={settings.showBackground}
+                  onChange={(checked) => updateSetting('showBackground', checked)}
+                />
+              </div>
+
+              <div>
+                <Text strong style={{ display: "block", marginBottom: "8px" }}>Background Pattern</Text>
+                <Select
+                  value={settings.backgroundType}
+                  onChange={(value) => updateSetting('backgroundType', value)}
+                  style={{ width: "100%" }}
+                  disabled={!settings.showBackground}
+                >
+                  <Select.Option value="dots">Dots</Select.Option>
+                  <Select.Option value="lines">Lines</Select.Option>
+                  <Select.Option value="cross">Cross</Select.Option>
+                </Select>
+              </div>
+
+              <div>
+                <Text strong style={{ display: "block", marginBottom: "8px" }}>
+                  Node Spacing: {settings.nodeSpacing}px
+                </Text>
+                <Slider
+                  min={100}
+                  max={300}
+                  value={settings.nodeSpacing}
+                  onChange={(value) => updateSetting('nodeSpacing', value)}
+                  marks={{
+                    100: '100px',
+                    150: '150px',
+                    200: '200px',
+                    250: '250px',
+                    300: '300px'
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Connection Settings */}
+          <div>
+            <Title level={5} style={{ marginBottom: "16px", color: "#262626" }}>
+              Connections
+            </Title>
+            <div>
+              <Text strong style={{ display: "block", marginBottom: "8px" }}>Edge Type</Text>
+              <Select
+                value={settings.edgeType}
+                onChange={(value) => updateSetting('edgeType', value)}
+                style={{ width: "100%" }}
+              >
+                <Select.Option value="default">Default</Select.Option>
+                <Select.Option value="straight">Straight</Select.Option>
+                <Select.Option value="step">Step</Select.Option>
+                <Select.Option value="smoothstep">Smooth Step</Select.Option>
+              </Select>
+            </div>
+          </div>
+
+          {/* Appearance Settings */}
+          <div>
+            <Title level={5} style={{ marginBottom: "16px", color: "#262626" }}>
+              Appearance
+            </Title>
+            <div>
+              <Text strong style={{ display: "block", marginBottom: "8px" }}>Theme</Text>
+              <Select
+                value={settings.theme}
+                onChange={(value) => updateSetting('theme', value)}
+                style={{ width: "100%" }}
+              >
+                <Select.Option value="light">Light</Select.Option>
+                <Select.Option value="dark">Dark</Select.Option>
+              </Select>
+            </div>
+          </div>
+        </div>
+      </Drawer>
+
+      {/* Node Settings drawer */}
+      <Drawer
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {selectedNode && (
+              <>
+                <div style={{ 
+                  color: selectedNode.data.nodeType === 'llm' ? '#6366f1' : 
+                        selectedNode.data.nodeType === 'knowledge' ? '#10b981' :
+                        selectedNode.data.nodeType === 'answer' ? '#f59e0b' :
+                        selectedNode.data.nodeType === 'agent' ? '#8b5cf6' :
+                        selectedNode.data.nodeType === 'classifier' ? '#10b981' :
+                        selectedNode.data.nodeType === 'ifelse' ? '#06b6d4' :
+                        selectedNode.data.nodeType === 'code' ? '#6366f1' :
+                        selectedNode.data.nodeType === 'http_request' ? '#8b5cf6' : '#666',
+                  fontSize: "16px"
+                }}>
+                  {selectedNode.data.nodeType === 'llm' ? <RobotOutlined /> :
+                   selectedNode.data.nodeType === 'knowledge' ? <DatabaseOutlined /> :
+                   selectedNode.data.nodeType === 'answer' ? <MessageOutlined /> :
+                   selectedNode.data.nodeType === 'agent' ? <SmileOutlined /> :
+                   selectedNode.data.nodeType === 'classifier' ? <FilterOutlined /> :
+                   selectedNode.data.nodeType === 'ifelse' ? <BranchesOutlined /> :
+                   selectedNode.data.nodeType === 'code' ? <CodeOutlined /> :
+                   selectedNode.data.nodeType === 'http_request' ? <ApiOutlined /> : <SettingOutlined />}
+                </div>
+                <span>{selectedNode.data.label} Settings</span>
+              </>
+            )}
+          </div>
+        }
+        placement="right"
+        onClose={() => setNodeSettingsVisible(false)}
+        open={nodeSettingsVisible}
+        width={400}
+        bodyStyle={{ padding: "16px" }}
+      >
+        {selectedNode && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            {/* Basic Node Info */}
+            <div>
+              <Title level={5} style={{ marginBottom: "16px", color: "#262626" }}>
+                Basic Information
+              </Title>
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <div>
+                  <Text strong style={{ display: "block", marginBottom: "8px" }}>Node Label</Text>
+                  <Input
+                    value={selectedNode.data.label || ''}
+                    onChange={(e) => updateNodeData(selectedNode.id, { label: e.target.value })}
+                    placeholder="Enter node label"
+                  />
+                </div>
+                
+                <div>
+                  <Text strong style={{ display: "block", marginBottom: "8px" }}>Description</Text>
+                  <Input.TextArea
+                    value={selectedNode.data.description || ''}
+                    onChange={(e) => updateNodeData(selectedNode.id, { description: e.target.value })}
+                    placeholder="Enter node description"
+                    rows={3}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Node Type Specific Settings */}
+            {selectedNode.data.nodeType === 'llm' && (
+              <div>
+                <Title level={5} style={{ marginBottom: "16px", color: "#262626" }}>
+                  LLM Configuration
+                </Title>
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <div>
+                    <Text strong style={{ display: "block", marginBottom: "8px" }}>Model</Text>
+                    <Select
+                      value={selectedNode.data.model || 'gpt-3.5-turbo'}
+                      onChange={(value) => updateNodeData(selectedNode.id, { model: value })}
+                      style={{ width: "100%" }}
+                    >
+                      <Select.Option value="gpt-3.5-turbo">GPT-3.5 Turbo</Select.Option>
+                      <Select.Option value="gpt-4">GPT-4</Select.Option>
+                      <Select.Option value="claude-3">Claude 3</Select.Option>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Text strong style={{ display: "block", marginBottom: "8px" }}>
+                      Temperature: {selectedNode.data.temperature || 0.7}
+                    </Text>
+                    <Slider
+                      min={0}
+                      max={2}
+                      step={0.1}
+                      value={selectedNode.data.temperature || 0.7}
+                      onChange={(value) => updateNodeData(selectedNode.id, { temperature: value })}
+                      marks={{
+                        0: '0',
+                        0.5: '0.5',
+                        1: '1',
+                        1.5: '1.5',
+                        2: '2'
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <Text strong style={{ display: "block", marginBottom: "8px" }}>System Prompt</Text>
+                    <Input.TextArea
+                      value={selectedNode.data.systemPrompt || ''}
+                      onChange={(e) => updateNodeData(selectedNode.id, { systemPrompt: e.target.value })}
+                      placeholder="Enter system prompt"
+                      rows={4}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedNode.data.nodeType === 'knowledge' && (
+              <div>
+                <Title level={5} style={{ marginBottom: "16px", color: "#262626" }}>
+                  Knowledge Retrieval
+                </Title>
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <div>
+                    <Text strong style={{ display: "block", marginBottom: "8px" }}>Knowledge Base</Text>
+                    <Select
+                      value={selectedNode.data.knowledgeBase || ''}
+                      onChange={(value) => updateNodeData(selectedNode.id, { knowledgeBase: value })}
+                      style={{ width: "100%" }}
+                      placeholder="Select knowledge base"
+                    >
+                      <Select.Option value="docs">Documentation</Select.Option>
+                      <Select.Option value="faq">FAQ</Select.Option>
+                      <Select.Option value="manual">User Manual</Select.Option>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Text strong style={{ display: "block", marginBottom: "8px" }}>
+                      Top K Results: {selectedNode.data.topK || 5}
+                    </Text>
+                    <Slider
+                      min={1}
+                      max={20}
+                      value={selectedNode.data.topK || 5}
+                      onChange={(value) => updateNodeData(selectedNode.id, { topK: value })}
+                      marks={{
+                        1: '1',
+                        5: '5',
+                        10: '10',
+                        20: '20'
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedNode.data.nodeType === 'http_request' && (
+              <div>
+                <Title level={5} style={{ marginBottom: "16px", color: "#262626" }}>
+                  HTTP Request
+                </Title>
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <div>
+                    <Text strong style={{ display: "block", marginBottom: "8px" }}>Method</Text>
+                    <Select
+                      value={selectedNode.data.method || 'GET'}
+                      onChange={(value) => updateNodeData(selectedNode.id, { method: value })}
+                      style={{ width: "100%" }}
+                    >
+                      <Select.Option value="GET">GET</Select.Option>
+                      <Select.Option value="POST">POST</Select.Option>
+                      <Select.Option value="PUT">PUT</Select.Option>
+                      <Select.Option value="DELETE">DELETE</Select.Option>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Text strong style={{ display: "block", marginBottom: "8px" }}>URL</Text>
+                    <Input
+                      value={selectedNode.data.url || ''}
+                      onChange={(e) => updateNodeData(selectedNode.id, { url: e.target.value })}
+                      placeholder="https://api.example.com/endpoint"
+                    />
+                  </div>
+
+                  <div>
+                    <Text strong style={{ display: "block", marginBottom: "8px" }}>Headers</Text>
+                    <Input.TextArea
+                      value={selectedNode.data.headers || ''}
+                      onChange={(e) => updateNodeData(selectedNode.id, { headers: e.target.value })}
+                      placeholder='{"Content-Type": "application/json"}'
+                      rows={3}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedNode.data.nodeType === 'code' && (
+              <div>
+                <Title level={5} style={{ marginBottom: "16px", color: "#262626" }}>
+                  Code Execution
+                </Title>
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <div>
+                    <Text strong style={{ display: "block", marginBottom: "8px" }}>Language</Text>
+                    <Select
+                      value={selectedNode.data.language || 'python'}
+                      onChange={(value) => updateNodeData(selectedNode.id, { language: value })}
+                      style={{ width: "100%" }}
+                    >
+                      <Select.Option value="python">Python</Select.Option>
+                      <Select.Option value="javascript">JavaScript</Select.Option>
+                      <Select.Option value="sql">SQL</Select.Option>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Text strong style={{ display: "block", marginBottom: "8px" }}>Code</Text>
+                    <Input.TextArea
+                      value={selectedNode.data.code || ''}
+                      onChange={(e) => updateNodeData(selectedNode.id, { code: e.target.value })}
+                      placeholder="# Enter your code here"
+                      rows={6}
+                      style={{ fontFamily: 'monospace' }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </Drawer>
     </div>
   );
