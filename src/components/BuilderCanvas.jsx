@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useRef } from "react";
 import ReactFlow, {
   MiniMap,
   Controls,
@@ -7,6 +7,8 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   Panel,
+  Handle,
+  Position,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { Button, Space, Card, Typography, Drawer, Divider, Tooltip, Input, List, Avatar, Spin, Switch, Select, Slider } from "antd";
@@ -45,7 +47,7 @@ import { saveAs } from "file-saver";
 const { Title, Text } = Typography;
 
 // Node types configuration exactly matching Dify.ai
-const nodeTypes = [
+const nodeTypesConfig = [
   {
     category: "Nodes",
     nodes: [
@@ -116,66 +118,142 @@ export default function BuilderCanvas() {
   const initialNodes = [
     {
       id: "start-1",
-      type: "input",
+      type: "custom",
       data: { 
         label: "Start",
         nodeType: "start",
-        description: "Workflow entry point"
+        description: "Workflow entry point",
+        color: "#52c41a"
       },
-      position: { x: 100, y: 100 },
-      style: {
-        background: "#f6ffed",
-        border: "2px solid #52c41a",
-        borderRadius: "8px",
-        padding: "10px",
-        minWidth: "120px"
-      }
+      position: { x: 100, y: 100 }
     },
     {
       id: "llm-1",
+      type: "custom",
       data: { 
         label: "LLM Node",
         nodeType: "llm",
-        description: "Large Language Model processing"
+        description: "Large Language Model processing",
+        color: "#1890ff"
       },
-      position: { x: 300, y: 100 },
-      style: {
-        background: "#e6f7ff",
-        border: "2px solid #1890ff",
-        borderRadius: "8px",
-        padding: "10px",
-        minWidth: "120px"
-      }
+      position: { x: 400, y: 100 }
     },
   ];
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([], {
+    type: 'smoothstep',
+    style: { stroke: '#555', strokeWidth: 2 },
+    markerEnd: {
+      type: 'arrowclosed',
+      color: '#555',
+    },
+  });
 
   const onConnect = useCallback(
     (params) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
 
+  // Custom node component with right/left handles
+  const CustomNode = ({ data, id }) => {
+    return (
+      <div style={{
+        background: `${data.color || '#6366f1'}15`,
+        border: `2px solid ${data.color || '#6366f1'}`,
+        borderRadius: "8px",
+        padding: "16px",
+        minWidth: "200px",
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+      }}>
+        {id !== 'start-1' && (
+          <Handle 
+            type="target" 
+            position={Position.Left} 
+            style={{ 
+              width: '10px',
+              height: '10px',
+              background: data.color || '#555',
+              border: `2px solid ${data.color || '#555'}`,
+              borderRadius: '50%'
+            }} 
+          />
+        )}
+        <div style={{ 
+          textAlign: 'left', 
+          fontWeight: '600',
+          marginBottom: '8px',
+          color: data.color || '#333',
+          fontSize: '14px',
+          fontFamily: 'Montserrat, sans-serif'
+        }}>
+          {data.label}
+        </div>
+        <div style={{ 
+          fontSize: '12px', 
+          color: '#666',
+          marginBottom: '8px',
+          fontFamily: 'Montserrat, sans-serif'
+        }}>
+          {data.description}
+        </div>
+        {id !== 'start-1' && (
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'flex-end',
+            marginTop: '8px'
+          }}>
+            <div style={{
+              width: '24px',
+              height: '24px',
+              borderRadius: '4px',
+              background: data.color ? `${data.color}20` : '#f0f0f0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <div style={{
+                width: '12px',
+                height: '12px',
+                background: data.color || '#999',
+                borderRadius: '2px'
+              }} />
+            </div>
+          </div>
+        )}
+        <Handle 
+          type="source" 
+          position={Position.Right} 
+          style={{ 
+            width: '10px',
+            height: '10px',
+            background: data.color || '#555',
+            border: `2px solid ${data.color || '#555'}`,
+            borderRadius: '50%'
+          }} 
+        />
+      </div>
+    );
+  };
+
+  const customNodeTypes = useRef({
+    custom: CustomNode
+  }).current;
+
   const addNode = (nodeType) => {
     const id = `${nodeType.type}-${Date.now()}`;
     const newNode = {
       id,
+      type: 'custom',
       data: { 
         label: nodeType.label,
         nodeType: nodeType.type,
-        description: `${nodeType.label} node`
+        description: `${nodeType.label} node`,
+        color: nodeType.color
       },
       position: { 
         x: Math.random() * 300 + 100, 
         y: Math.random() * 200 + 100 
-      },
-      style: {
-        background: `${nodeType.color}15`,
-        border: `2px solid ${nodeType.color}`,
-        borderRadius: "8px",
-        padding: "10px",
-        minWidth: "120px"
       }
     };
     
@@ -363,6 +441,7 @@ export default function BuilderCanvas() {
         <ReactFlow
           nodes={nodes}
           edges={edges}
+          nodeTypes={customNodeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
@@ -370,6 +449,29 @@ export default function BuilderCanvas() {
           onDrop={onDrop}
           onDragOver={onDragOver}
           fitView
+          nodesDraggable={true}
+          nodesConnectable={true}
+          elementsSelectable={true}
+          defaultEdgeOptions={{
+            type: 'smoothstep',
+            style: { 
+              stroke: '#8c8c8c', 
+              strokeWidth: 2,
+              borderRadius: '4px'
+            },
+            markerEnd: {
+              type: 'arrowclosed',
+              color: '#8c8c8c',
+              width: 12,
+              height: 12
+            },
+            animated: true
+          }}
+          connectionLineStyle={{
+            stroke: '#8c8c8c',
+            strokeWidth: 2,
+            strokeDasharray: '5,5'
+          }}
           style={{ 
             width: "100%", 
             height: "100%", 
@@ -384,7 +486,7 @@ export default function BuilderCanvas() {
           />
           <MiniMap
             nodeColor={(node) => {
-              const nodeType = nodeTypes.flat().find(cat => 
+              const nodeType = nodeTypesConfig.flat().find(cat => 
                 cat.nodes?.find(n => n.type === node.data?.nodeType)
               )?.nodes?.find(n => n.type === node.data?.nodeType);
               return nodeType?.color || '#e0e0e0';
@@ -608,7 +710,7 @@ export default function BuilderCanvas() {
         width={320}
         bodyStyle={{ padding: "16px" }}
       >
-        {nodeTypes.map((category, categoryIndex) => (
+        {nodeTypesConfig.map((category, categoryIndex) => (
           <div key={categoryIndex} style={{ marginBottom: "24px" }}>
             <Text strong style={{ 
               fontSize: "14px", 
@@ -926,19 +1028,38 @@ export default function BuilderCanvas() {
             {selectedNode.data.nodeType === 'llm' && (
               <div>
                 <Title level={5} style={{ marginBottom: "16px", color: "#262626" }}>
-                  LLM Configuration
+                  Ollama Configuration
                 </Title>
                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                   <div>
+                    <Text strong style={{ display: "block", marginBottom: "8px" }}>Ollama Base URL</Text>
+                    <Input
+                      value={selectedNode.data.baseUrl || 'http://localhost:11434'}
+                      onChange={(e) => updateNodeData(selectedNode.id, { baseUrl: e.target.value })}
+                      placeholder="http://localhost:11434"
+                    />
+                  </div>
+                  
+                  <div>
                     <Text strong style={{ display: "block", marginBottom: "8px" }}>Model</Text>
                     <Select
-                      value={selectedNode.data.model || 'gpt-3.5-turbo'}
+                      value={selectedNode.data.model || 'llama2'}
                       onChange={(value) => updateNodeData(selectedNode.id, { model: value })}
                       style={{ width: "100%" }}
+                      showSearch
+                      placeholder="Select or type model name"
                     >
-                      <Select.Option value="gpt-3.5-turbo">GPT-3.5 Turbo</Select.Option>
-                      <Select.Option value="gpt-4">GPT-4</Select.Option>
-                      <Select.Option value="claude-3">Claude 3</Select.Option>
+                      <Select.Option value="llama2">Llama 2</Select.Option>
+                      <Select.Option value="llama2:13b">Llama 2 13B</Select.Option>
+                      <Select.Option value="llama2:70b">Llama 2 70B</Select.Option>
+                      <Select.Option value="codellama">Code Llama</Select.Option>
+                      <Select.Option value="codellama:13b">Code Llama 13B</Select.Option>
+                      <Select.Option value="mistral">Mistral</Select.Option>
+                      <Select.Option value="mixtral">Mixtral</Select.Option>
+                      <Select.Option value="neural-chat">Neural Chat</Select.Option>
+                      <Select.Option value="starling-lm">Starling</Select.Option>
+                      <Select.Option value="vicuna">Vicuna</Select.Option>
+                      <Select.Option value="orca-mini">Orca Mini</Select.Option>
                     </Select>
                   </div>
                   
@@ -959,6 +1080,75 @@ export default function BuilderCanvas() {
                         1.5: '1.5',
                         2: '2'
                       }}
+                    />
+                  </div>
+
+                  <div>
+                    <Text strong style={{ display: "block", marginBottom: "8px" }}>
+                      Max Tokens: {selectedNode.data.maxTokens || 2048}
+                    </Text>
+                    <Slider
+                      min={256}
+                      max={8192}
+                      step={256}
+                      value={selectedNode.data.maxTokens || 2048}
+                      onChange={(value) => updateNodeData(selectedNode.id, { maxTokens: value })}
+                      marks={{
+                        256: '256',
+                        1024: '1K',
+                        2048: '2K',
+                        4096: '4K',
+                        8192: '8K'
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <Text strong style={{ display: "block", marginBottom: "8px" }}>
+                      Context Window: {selectedNode.data.contextWindow || 4096}
+                    </Text>
+                    <Select
+                      value={selectedNode.data.contextWindow || 4096}
+                      onChange={(value) => updateNodeData(selectedNode.id, { contextWindow: value })}
+                      style={{ width: "100%" }}
+                    >
+                      <Select.Option value={2048}>2K tokens</Select.Option>
+                      <Select.Option value={4096}>4K tokens</Select.Option>
+                      <Select.Option value={8192}>8K tokens</Select.Option>
+                      <Select.Option value={16384}>16K tokens</Select.Option>
+                      <Select.Option value={32768}>32K tokens</Select.Option>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Text strong style={{ display: "block", marginBottom: "8px" }}>
+                      Top P: {selectedNode.data.topP || 0.9}
+                    </Text>
+                    <Slider
+                      min={0.1}
+                      max={1}
+                      step={0.1}
+                      value={selectedNode.data.topP || 0.9}
+                      onChange={(value) => updateNodeData(selectedNode.id, { topP: value })}
+                      marks={{
+                        0.1: '0.1',
+                        0.5: '0.5',
+                        0.9: '0.9',
+                        1: '1.0'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <Text strong>Stream Response</Text>
+                      <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                        Enable streaming for real-time responses
+                      </div>
+                    </div>
+                    <Switch
+                      checked={selectedNode.data.stream || true}
+                      onChange={(checked) => updateNodeData(selectedNode.id, { stream: checked })}
                     />
                   </div>
 
@@ -984,14 +1174,15 @@ export default function BuilderCanvas() {
                   <div>
                     <Text strong style={{ display: "block", marginBottom: "8px" }}>Knowledge Base</Text>
                     <Select
-                      value={selectedNode.data.knowledgeBase || ''}
+                      value={selectedNode.data.knowledgeBase || 'default'}
                       onChange={(value) => updateNodeData(selectedNode.id, { knowledgeBase: value })}
                       style={{ width: "100%" }}
                       placeholder="Select knowledge base"
                     >
-                      <Select.Option value="docs">Documentation</Select.Option>
-                      <Select.Option value="faq">FAQ</Select.Option>
-                      <Select.Option value="manual">User Manual</Select.Option>
+                      <Select.Option value="default">Default Knowledge Base</Select.Option>
+                      <Select.Option value="project_docs">Project Documentation</Select.Option>
+                      <Select.Option value="api_docs">API Documentation</Select.Option>
+                      <Select.Option value="custom">Custom Collection</Select.Option>
                     </Select>
                   </div>
 
@@ -1001,17 +1192,46 @@ export default function BuilderCanvas() {
                     </Text>
                     <Slider
                       min={1}
-                      max={20}
+                      max={10}
                       value={selectedNode.data.topK || 5}
                       onChange={(value) => updateNodeData(selectedNode.id, { topK: value })}
                       marks={{
                         1: '1',
+                        3: '3',
                         5: '5',
-                        10: '10',
-                        20: '20'
+                        7: '7',
+                        10: '10'
                       }}
                     />
                   </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <Text strong>Use Ollama Embeddings</Text>
+                      <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                        Generate embeddings using Ollama instead of default
+                      </div>
+                    </div>
+                    <Switch
+                      checked={selectedNode.data.useOllamaEmbeddings || false}
+                      onChange={(checked) => updateNodeData(selectedNode.id, { useOllamaEmbeddings: checked })}
+                    />
+                  </div>
+
+                  {selectedNode.data.useOllamaEmbeddings && (
+                    <div>
+                      <Text strong style={{ display: "block", marginBottom: "8px" }}>Embedding Model</Text>
+                      <Select
+                        value={selectedNode.data.embeddingModel || 'llama2'}
+                        onChange={(value) => updateNodeData(selectedNode.id, { embeddingModel: value })}
+                        style={{ width: "100%" }}
+                      >
+                        <Select.Option value="llama2">Llama 2</Select.Option>
+                        <Select.Option value="codellama">Code Llama</Select.Option>
+                        <Select.Option value="mistral">Mistral</Select.Option>
+                      </Select>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
