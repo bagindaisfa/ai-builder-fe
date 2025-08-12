@@ -119,7 +119,7 @@ export default function ApiAccessPanel() {
       <Card
         style={{
           marginBottom: 24,
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          background: "linear-gradient(135deg, #277c90 0%, #66a0b8 100%)",
           border: "none",
           borderRadius: "12px",
         }}
@@ -128,8 +128,8 @@ export default function ApiAccessPanel() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <ApiOutlined style={{ fontSize: "24px", color: "#fff" }} />
-            <Title level={4} style={{ margin: 0, color: "#fff" }}>
-              API Access Management
+            <Title level={4} style={{ margin: 0, color: "#fff", fontFamily: "'Montserrat', sans-serif" }}>
+              DATACORE API Access
             </Title>
           </div>
         </div>
@@ -156,7 +156,7 @@ export default function ApiAccessPanel() {
         }}
         title={
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <KeyOutlined style={{ color: "#667eea" }} />
+            <KeyOutlined style={{ color: "#277c90" }} />
             <span>Create New API Key</span>
           </div>
         }
@@ -178,7 +178,7 @@ export default function ApiAccessPanel() {
             icon={<PlusOutlined />}
             onClick={onCreate}
             style={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              background: "linear-gradient(135deg, #277c90 0%, #66a0b8 100%)",
               border: "none",
               borderRadius: "0 8px 8px 0",
               height: "40px",
@@ -200,7 +200,7 @@ export default function ApiAccessPanel() {
         }}
         title={
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <KeyOutlined style={{ color: "#667eea" }} />
+            <KeyOutlined style={{ color: "#277c90" }} />
             <span>Your API Keys</span>
           </div>
         }

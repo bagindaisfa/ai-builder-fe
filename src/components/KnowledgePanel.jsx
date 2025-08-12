@@ -98,7 +98,7 @@ export default function KnowledgePanel() {
       <Card
         style={{
           marginBottom: 24,
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          background: "linear-gradient(135deg, #277c90 0%, #66a0b8 100%)",
           border: "none",
           borderRadius: "12px",
         }}
@@ -107,8 +107,8 @@ export default function KnowledgePanel() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <DatabaseOutlined style={{ fontSize: "24px", color: "#fff" }} />
-            <Title level={4} style={{ margin: 0, color: "#fff" }}>
-              Knowledge Base
+            <Title level={4} style={{ margin: 0, color: "#fff", fontFamily: "'Montserrat', sans-serif" }}>
+              DATACORE Knowledge Base
             </Title>
           </div>
         </div>
@@ -126,7 +126,7 @@ export default function KnowledgePanel() {
           <CloudUploadOutlined 
             style={{ 
               fontSize: "48px", 
-              color: "#667eea", 
+              color: "#277c90", 
               marginBottom: "16px",
               display: "block"
             }} 
@@ -143,7 +143,7 @@ export default function KnowledgePanel() {
               icon={<UploadOutlined />}
               size="large"
               style={{
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                background: "linear-gradient(135deg, #277c90 0%, #66a0b8 100%)",
                 border: "none",
                 borderRadius: "8px",
                 fontWeight: "500",
@@ -166,7 +166,7 @@ export default function KnowledgePanel() {
         }}
         title={
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <DatabaseOutlined style={{ color: "#667eea" }} />
+            <DatabaseOutlined style={{ color: "#277c90" }} />
             <span>Uploaded Documents</span>
           </div>
         }
