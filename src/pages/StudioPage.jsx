@@ -1,11 +1,13 @@
 import React from "react";
+import StudioPanel from "../components/StudioPanel";
 import PageContainer from "../components/common/PageContainer";
-import PreviewPanel from "../components/PreviewPanel";
 
-export default function PreviewPage() {
+const StudioPage = () => {
   return (
     <PageContainer>
-      <PreviewPanel />
+      <StudioPanel />
     </PageContainer>
   );
-}
+};
+
+export default StudioPage;

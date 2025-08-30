@@ -1,202 +1,120 @@
 import React from "react";
-import { Layout, Menu } from "antd";
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from "react-router-dom";
-import {
-  BuildOutlined,
-  DatabaseOutlined,
-  EyeOutlined,
-  ApiOutlined,
-  RobotOutlined,
-} from "@ant-design/icons";
-
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "./contexts/AuthContext";
+import AppLayout from "./components/layout/AppLayout";
+import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
+import ProfilePage from "./pages/ProfilePage";
+import StudioPage from "./pages/StudioPage";
 import BuilderPage from "./pages/BuilderPage";
 import KnowledgePage from "./pages/KnowledgePage";
+import DatasetDetailPage from "./pages/DatasetDetailPage";
 import PreviewPage from "./pages/PreviewPage";
 import ApiAccessPage from "./pages/ApiAccessPage";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+import { Spin, Typography } from "antd";
 
-const { Sider, Header, Content } = Layout;
+const { Text } = Typography;
 
-// Component to handle dynamic header title
-function AppContent() {
+// Main App Content (protected routes)
+const AppContent = () => {
+  return (
+    <AppLayout>
+      <Routes>
+        <Route path="/" element={<Navigate to="/studio" replace />} />
+        <Route path="/studio" element={<StudioPage />} />
+        <Route path="/builder/:workflowId" element={<BuilderPage />} />
+        <Route path="/knowledge" element={<KnowledgePage />} />
+        <Route path="/datasets/:datasetId" element={<DatasetDetailPage />} />
+        <Route path="/preview" element={<PreviewPage />} />
+        <Route path="/api" element={<ApiAccessPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="*" element={<Navigate to="/studio" replace />} />
+      </Routes>
+    </AppLayout>
+  );
+};
+
+// Loading component
+const FullPageLoading = ({ message = 'Loading...' }) => (
+  <div style={{
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100vh',
+    width: '100%',
+    gap: '16px'
+  }}>
+    <Spin size="large" />
+    <Text type="secondary">{message}</Text>
+  </div>
+);
+
+// Main App Component
+const App = () => {
   const location = useLocation();
-  
-  // Function to get page title based on current route
-  const getPageTitle = () => {
-    switch (location.pathname) {
-      case '/':
-        return 'Workflow Builder';
-      case '/knowledge':
-        return 'Knowledge Base';
-      case '/preview':
-        return 'Chat Preview';
-      case '/api':
-        return 'API Access';
-      default:
-        return 'DATACORE AI FORGE';
+  const { loading, isAuthenticated, error, isInitialized } = useAuth();
+  const [showLoading, setShowLoading] = React.useState(true);
+
+  // Handle initial load and authentication state
+  React.useEffect(() => {
+    // Only show loading on initial app load, not during login attempts
+    if (isInitialized) {
+      const timer = setTimeout(() => setShowLoading(false), 300);
+      return () => clearTimeout(timer);
     }
-  };
+  }, [isInitialized]);
 
-  // Function to get selected menu key based on current route
-  const getSelectedMenuKey = () => {
-    switch (location.pathname) {
-      case '/':
-        return ['builder'];
-      case '/knowledge':
-        return ['knowledge'];
-      case '/preview':
-        return ['preview'];
-      case '/api':
-        return ['api'];
-      default:
-        return ['builder'];
+  // Public routes that don't require authentication
+  const publicRoutes = [
+    '/login',
+    '/callback',
+    '/forgot-password',
+    '/reset-password',
+    '/auth' // Add this if you have any auth-related routes
+  ];
+
+  // Show loading state only during initial app load
+  if (!isInitialized || showLoading) {
+    return <FullPageLoading message="Loading..." />;
+  }
+
+  // For login/signup pages, handle specially to prevent redirect loops
+  if (location.pathname === '/login' || location.pathname === '/signup') {
+    if (isAuthenticated) {
+      const returnTo = location.state?.from?.pathname || '/';
+      return <Navigate to={returnTo} replace />;
     }
-  };
+    
+    if (location.pathname === '/login') {
+      return <LoginPage />;
+    }
+    return <SignupPage />;
+  }
 
-  return (
-      <Layout style={{ minHeight: "100vh", background: "#f8fafc", fontFamily: "'Montserrat', sans-serif" }}>
-        <Sider
-          width={280}
-          style={{
-            background: "#ffffff",
-            borderRight: "1px solid #e5e7eb",
-            boxShadow: "2px 0 8px rgba(0, 0, 0, 0.05)",
-          }}
-        >
-          <div
-            style={{
-              height: 100,
-              background: "#ffffff",
-              color: "#1f2937",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "20px",
-              borderBottom: "1px solid #e5e7eb",
-            }}
-          >
-            {/* DATACORE Logo - Replace src with your logo file path */}
-            <img 
-              src="/src/assets/datacore-logo.png" 
-              alt="DATACORE AI FORGE" 
-              style={{
-                maxWidth: "200px",
-                maxHeight: "60px",
-                objectFit: "contain"
-              }}
-              onError={(e) => {
-                // Fallback to text if image fails to load
-                e.target.style.display = 'none';
-                e.target.nextSibling.style.display = 'flex';
-              }}
-            />
-            {/* Fallback text (hidden by default, shown if image fails) */}
-            <div style={{ 
-              display: "none",
-              flexDirection: "column",
-              alignItems: "center"
-            }}>
-              <div style={{ 
-                width: "40px", 
-                height: "40px", 
-                background: "#fff", 
-                borderRadius: "8px", 
-                display: "flex", 
-                alignItems: "center", 
-                justifyContent: "center", 
-                marginBottom: "8px",
-                fontSize: "20px",
-                fontWeight: "bold",
-                color: "#277c90"
-              }}>
-                DC
-              </div>
-              <strong style={{ color: "#fff", fontSize: "18px", fontWeight: "600", fontFamily: "'Montserrat', sans-serif" }}>DATACORE</strong>
-              <span style={{ color: "rgba(255, 255, 255, 0.8)", fontSize: "12px", fontFamily: "'Montserrat', sans-serif" }}>AI FORGE v1.0</span>
-            </div>
-          </div>
-          <Menu
-            theme="light"
-            mode="inline"
-            selectedKeys={getSelectedMenuKey()}
-            style={{
-              background: "#ffffff",
-              border: "none",
-              fontSize: "16px",
-              fontFamily: "'Montserrat', sans-serif",
-            }}
-            items={[
-              {
-                key: "builder",
-                icon: <BuildOutlined style={{ fontSize: "18px" }} />,
-                label: <Link to="/" style={{ color: "#374151", textDecoration: "none" }}>Workflow Builder</Link>,
-              },
-              {
-                key: "knowledge",
-                icon: <DatabaseOutlined style={{ fontSize: "18px" }} />,
-                label: <Link to="/knowledge" style={{ color: "#374151", textDecoration: "none" }}>Knowledge Base</Link>,
-              },
-              {
-                key: "preview",
-                icon: <EyeOutlined style={{ fontSize: "18px" }} />,
-                label: <Link to="/preview" style={{ color: "#374151", textDecoration: "none" }}>Chat Preview</Link>,
-              },
-              {
-                key: "api",
-                icon: <ApiOutlined style={{ fontSize: "18px" }} />,
-                label: <Link to="/api" style={{ color: "#374151", textDecoration: "none" }}>API Access</Link>,
-              },
-            ]}
-          />
-        </Sider>
-        <Layout>
-          <Header
-            style={{
-              height: "100px",
-              background: "#ffffff",
-              paddingLeft: 24,
-              borderBottom: "1px solid #e5e7eb",
-              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-            }}
-          >
-            <h1 style={{ 
-              margin: "35px 10px", 
-              fontSize: "24px", 
-              fontWeight: "600", 
-              background: "linear-gradient(135deg, #277c90 0%, #66a0b8 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-              fontFamily: "'Montserrat', sans-serif"
-            }}>
-              {getPageTitle()}
-            </h1>
-          </Header>
-          <Content
-            style={{
-              margin: 24,
-              padding: 24,
-              background: "#ffffff",
-              borderRadius: "12px",
-              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
-              border: "1px solid #e5e7eb",
-            }}
-          >
-            <Routes>
-              <Route path="/" element={<BuilderPage />} />
-              <Route path="/knowledge" element={<KnowledgePage />} />
-              <Route path="/preview" element={<PreviewPage />} />
-              <Route path="/api" element={<ApiAccessPage />} />
-            </Routes>
-          </Content>
-        </Layout>
-      </Layout>
-  );
-}
+  // Show loading while checking auth state
+  if (!isInitialized) {
+    return <FullPageLoading message="Loading..." />;
+  }
 
-export default function App() {
+  // For other routes, redirect to login if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/*" element={<Navigate to="/login" state={{ from: location }} replace />} />
+      </Routes>
+    );
+  }
+
+  // For authenticated users
   return (
-    <Router>
-      <AppContent />
-    </Router>
+    <Routes>
+      <Route path="/login" element={<Navigate to="/" replace />} />
+      <Route path="/*" element={<AppContent />} />
+    </Routes>
   );
-}
+};
+
+export default App;

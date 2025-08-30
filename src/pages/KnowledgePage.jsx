@@ -1,10 +1,11 @@
 import React from "react";
+import PageContainer from "../components/common/PageContainer";
 import KnowledgePanel from "../components/KnowledgePanel";
 
 export default function KnowledgePage() {
   return (
-    <div style={{ height: "calc(100vh - 160px)" }}>
+    <PageContainer>
       <KnowledgePanel />
-    </div>
+    </PageContainer>
   );
 }

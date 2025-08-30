@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Input, Button, List, message, Card, Typography, Avatar, Space, Select, Alert, Badge, Tag, Empty } from "antd";
-import { SendOutlined, UserOutlined, RobotOutlined, MessageOutlined, ProjectOutlined, PlayCircleOutlined } from "@ant-design/icons";
+import { Input, Button, List, message, Card, Typography, Avatar, Select, Badge, Tag, Flex } from "antd";
+import { SendOutlined, UserOutlined, RobotOutlined, MessageOutlined, ProjectOutlined } from "@ant-design/icons";
 import { runWorkflow } from "../api/api";
+import GradientCard from "./common/GradientCard";
 
 const { Title, Text } = Typography;
 
@@ -12,8 +13,8 @@ export default function PreviewPanel() {
   const [projectMessages, setProjectMessages] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   
-  // Mock projects data - in real app, this would come from API
-  const [projects] = useState([
+  // Mock workflows data - in real app, this would come from API
+  const [workflows] = useState([
     {
       id: "project-1",
       name: "E-commerce Assistant",
@@ -52,7 +53,7 @@ export default function PreviewPanel() {
     }
   ]);
 
-  const currentProject = projects.find(p => p.id === selectedProject);
+  const currentProject = workflows.find(p => p.id === selectedProject);
 
   // Load project-specific messages when project changes
   useEffect(() => {
@@ -64,7 +65,7 @@ export default function PreviewPanel() {
   }, [selectedProject, projectMessages]);
 
   // Handle project selection
-  const handleProjectChange = (projectId) => {
+  const handleProjectChange = (workflowId) => {
     // Save current messages to project-specific storage
     if (selectedProject) {
       setProjectMessages(prev => ({
@@ -72,7 +73,7 @@ export default function PreviewPanel() {
         [selectedProject]: messages
       }));
     }
-    setSelectedProject(projectId);
+    setSelectedProject(workflowId);
   };
 
   const onSend = async () => {
@@ -118,117 +119,86 @@ export default function PreviewPanel() {
   };
 
   return (
-    <div style={{ 
-      height: "100%", 
-      display: "flex", 
-      flexDirection: "column",
-      padding: "16px",
-      background: "#f8fafc",
-      overflow: "auto",
-      boxSizing: "border-box"
-    }}>
+    <Flex 
+      vertical 
+      gap="large" 
+      style={{ 
+        height: "100%", 
+        overflow: "auto",
+      }}
+    >
       {/* Header with project selector */}
-      <Card
+      <GradientCard
         style={{
-          marginBottom: 16,
-          background: "linear-gradient(135deg, #277c90 0%, #66a0b8 100%)",
-          border: "none",
-          borderRadius: "16px",
-          boxShadow: "0 8px 32px rgba(39, 124, 144, 0.3)",
           overflow: "visible",
           zIndex: 1000
         }}
-        bodyStyle={{ padding: "20px 24px", overflow: "visible" }}
+        bodyStyle={{ overflow: "visible" }}
       >
-        <div style={{ 
-          display: "flex", 
-          justifyContent: "space-between", 
-          alignItems: "center", 
-          marginBottom: "24px" 
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <div style={{
-              background: "rgba(255, 255, 255, 0.2)",
-              borderRadius: "12px",
-              padding: "12px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
-            }}>
+        <Flex vertical gap="large">
+          <Flex align="center" gap="middle">
+            <Flex
+              align="center"
+              justify="center"
+              style={{
+                background: "rgba(255, 255, 255, 0.2)",
+                borderRadius: "12px",
+                padding: "12px",
+              }}
+            >
               <MessageOutlined style={{ fontSize: "24px", color: "#fff" }} />
-            </div>
-            <div>
+            </Flex>
+            <Flex vertical>
               <Title level={3} style={{ margin: 0, color: "#fff", fontWeight: "600", fontFamily: "'Montserrat', sans-serif" }}>
-                DATACORE Chat Preview
+                Chat Preview
               </Title>
               <Text style={{ color: "rgba(255, 255, 255, 0.8)", fontSize: "14px", fontFamily: "'Montserrat', sans-serif" }}>
                 Test and interact with your AI workflows
               </Text>
-            </div>
-          </div>
-        </div>
-        
-        <Select
-          placeholder="🔍 Select a project to test"
-          value={selectedProject}
-          onChange={handleProjectChange}
-          style={{ width: "100%", fontFamily: "'Montserrat', sans-serif" }}
-          size="large"
-          dropdownStyle={{
-            borderRadius: "12px",
-            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)",
-            zIndex: 1001,
-            fontFamily: "'Montserrat', sans-serif"
-          }}
-          getPopupContainer={(triggerNode) => triggerNode.parentNode}
-        >
-          {projects.map(project => (
+            </Flex>
+          </Flex>
+          <Select
+            placeholder="🔍 Select a project to test"
+            value={selectedProject}
+            onChange={handleProjectChange}
+            style={{ width: "100%", fontFamily: "'Montserrat', sans-serif" }}
+            size="large"
+            dropdownStyle={{
+              borderRadius: "12px",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)",
+              zIndex: 1001,
+              fontFamily: "'Montserrat', sans-serif"
+            }}
+            getPopupContainer={(triggerNode) => triggerNode.parentNode}
+          >
+          {workflows.map(project => (
             <Select.Option key={project.id} value={project.id}>
-              <div style={{ 
-                display: "flex", 
-                justifyContent: "space-between", 
-                alignItems: "center",
-                padding: "8px 0"
-              }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{
+              <Flex justify="space-between" align="center" style={{ padding: "8px 0" }}>
+                <Flex vertical style={{ flex: 1 }}>
+                  <Text style={{
                     fontSize: "16px",
                     fontWeight: "500",
                     color: "#374151",
-                    marginBottom: "8px",
                     fontFamily: "'Montserrat', sans-serif"
                   }}>
                     {project.name}
-                  </div>
-                  <div style={{ 
-                    fontSize: "12px", 
-                    color: "#6b7280",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    height: "25px"
-                  }}>
-                    <span>🔗 {project.nodes} nodes</span>
-                    <span>•</span>
-                    <span>Updated {project.lastUpdated}</span>
-                  </div>
-                </div>
+                  </Text>
+                </Flex>
                 <Badge 
                   status={project.status === 'deployed' ? 'success' : 'processing'} 
                   text={project.status === 'deployed' ? 'Live' : 'Draft'}
-                  style={{ marginLeft: "12px" }}
                 />
-              </div>
+              </Flex>
             </Select.Option>
           ))}
-        </Select>
-      </Card>
+          </Select>
+        </Flex>
+      </GradientCard>
 
       {/* Project info banner */}
       {currentProject && (
         <Card
           style={{
-            marginBottom: "16px",
             borderRadius: "16px",
             border: "1px solid #e1e7ef",
             background: "linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)",
@@ -236,22 +206,23 @@ export default function PreviewPanel() {
           }}
           bodyStyle={{ padding: "16px 20px" }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px" }}>
-            <div style={{
-              background: currentProject.status === 'deployed' ? '#10b981' : '#f59e0b',
-              borderRadius: "10px",
-              padding: "10px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
-            }}>
+          <Flex align="center" gap="middle" style={{ marginBottom: "12px" }}>
+            <Flex
+              align="center"
+              justify="center"
+              style={{
+                background: currentProject.status === 'deployed' ? '#10b981' : '#f59e0b',
+                borderRadius: "10px",
+                padding: "10px",
+              }}
+            >
               <ProjectOutlined style={{ 
                 fontSize: "20px", 
                 color: "#fff" 
               }} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "4px" }}>
+            </Flex>
+            <Flex vertical style={{ flex: 1 }}>
+              <Flex align="center" gap="middle" style={{ marginBottom: "4px" }}>
                 <Title level={5} style={{ margin: 0, color: "#1f2937", fontWeight: "600", fontFamily: "'Montserrat', sans-serif" }}>
                   Testing: {currentProject.name}
                 </Title>
@@ -267,25 +238,28 @@ export default function PreviewPanel() {
                 >
                   {currentProject.status === 'deployed' ? '🟢 Live' : '🟡 Draft'}
                 </Tag>
-              </div>
+              </Flex>
               <Text style={{ color: "#6b7280", fontSize: "14px", lineHeight: "1.5", fontFamily: "'Montserrat', sans-serif" }}>
                 {currentProject.description}
               </Text>
-            </div>
-          </div>
-          <div style={{
-            background: "#f8fafc",
-            borderRadius: "8px",
-            padding: "12px 16px",
-            border: "1px solid #e5e7eb"
-          }}>
-            <div style={{ 
-              display: "flex", 
-              alignItems: "center", 
-              gap: "16px",
-              fontSize: "12px",
-              color: "#6b7280"
-            }}>
+            </Flex>
+          </Flex>
+          <Flex
+            style={{
+              background: "#f8fafc",
+              borderRadius: "8px",
+              padding: "12px 16px",
+              border: "1px solid #e5e7eb"
+            }}
+          >
+            <Flex 
+              align="center" 
+              gap="middle"
+              style={{
+                fontSize: "12px",
+                color: "#6b7280"
+              }}
+            >
               <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                 🔗 <strong>Workflow:</strong> {currentProject.workflowId}
               </span>
@@ -297,8 +271,8 @@ export default function PreviewPanel() {
               <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                 📅 Updated: <strong>{currentProject.lastUpdated}</strong>
               </span>
-            </div>
-          </div>
+            </Flex>
+          </Flex>
         </Card>
       )}
 
@@ -307,50 +281,47 @@ export default function PreviewPanel() {
         <Card 
           style={{ 
             flex: 1, 
-            display: "flex", 
-            alignItems: "center", 
-            justifyContent: "center",
             borderRadius: "16px",
             border: "2px dashed #e1e7ef",
             background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)"
           }}
           bodyStyle={{ 
-            display: "flex", 
-            alignItems: "center", 
-            justifyContent: "center",
             padding: "60px 40px"
           }}
         >
-          <div style={{ textAlign: "center", maxWidth: "400px" }}>
-            <div style={{
-              background: "linear-gradient(135deg, #277c90 0%, #66a0b8 100%)",
-              borderRadius: "20px",
-              padding: "20px",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              marginBottom: "24px"
-            }}>
+          <Flex vertical align="center" style={{ textAlign: "center", maxWidth: "400px", margin: "0 auto" }}>
+            <Flex
+              align="center"
+              justify="center"
+              style={{
+                background: "linear-gradient(135deg, #277c90 0%, #66a0b8 100%)",
+                borderRadius: "20px",
+                padding: "20px",
+                marginBottom: "24px"
+              }}
+            >
               <ProjectOutlined style={{ fontSize: "48px", color: "#fff" }} />
-            </div>
+            </Flex>
             <Title level={4} style={{ color: "#1f2937", marginBottom: "8px", fontWeight: "600" }}>
               No Project Selected
             </Title>
             <Text style={{ color: "#6b7280", fontSize: "16px", lineHeight: "1.6" }}>
               Choose a project from the dropdown above to start testing your AI workflows
             </Text>
-            <div style={{ 
-              marginTop: "24px", 
-              padding: "16px", 
-              background: "#f0f9ff", 
-              borderRadius: "12px",
-              border: "1px solid #bae6fd"
-            }}>
+            <Flex
+              style={{ 
+                marginTop: "24px", 
+                padding: "16px", 
+                background: "#f0f9ff", 
+                borderRadius: "12px",
+                border: "1px solid #bae6fd"
+              }}
+            >
               <Text style={{ color: "#0369a1", fontSize: "14px" }}>
                 💡 <strong>Tip:</strong> Each project maintains its own conversation history
               </Text>
-            </div>
-          </div>
+            </Flex>
+          </Flex>
         </Card>
       )}
 
@@ -574,6 +545,6 @@ export default function PreviewPanel() {
         </div>
       </Card>
       )}
-    </div>
+    </Flex>
   );
 }

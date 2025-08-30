@@ -1,4 +1,5 @@
-import React, { useCallback, useState, useRef } from "react";
+import React, { useCallback, useState, useRef, useEffect } from "react";
+import { useTheme } from '../contexts/ThemeContext';
 import ReactFlow, {
   MiniMap,
   Controls,
@@ -9,11 +10,14 @@ import ReactFlow, {
   Panel,
   Handle,
   Position,
+  getSmoothStepPath,
 } from "reactflow";
+import CustomEdge from './CustomEdge';
 import "reactflow/dist/style.css";
 import { Button, Space, Card, Typography, Drawer, Divider, Tooltip, Input, List, Avatar, Spin, Switch, Select, Slider } from "antd";
 import { 
   PlusOutlined, 
+  SaveOutlined,
   DownloadOutlined, 
   NodeIndexOutlined,
   RobotOutlined,
@@ -40,13 +44,17 @@ import {
   ScissorOutlined,
   CalculatorOutlined,
   UnorderedListOutlined,
-  FunctionOutlined
+  DownOutlined,
+  RightOutlined,
+  FunctionOutlined,
+  DeleteOutlined
 } from "@ant-design/icons";
 import { saveAs } from "file-saver";
+import { getWorkflow, updateWorkflow, executeWorkflow, cancelWorkflow } from "../api/api";
 
 const { Title, Text } = Typography;
 
-// Node types configuration exactly matching Dify.ai
+// Node types configuration
 const nodeTypesConfig = [
   {
     category: "Nodes",
@@ -91,7 +99,41 @@ const nodeTypesConfig = [
   }
 ];
 
-export default function BuilderCanvas() {
+// Get theme-aware styles
+const getThemeStyles = (isDarkMode) => ({
+  container: {
+    width: '100%',
+    height: '100%',
+    background: isDarkMode ? '#1a202c' : '#f8fafc',
+  },
+  node: {
+    background: isDarkMode ? '#2d3748' : '#ffffff',
+    border: `1px solid ${isDarkMode ? '#4a5568' : '#e2e8f0'}`,
+    color: isDarkMode ? '#e2e8f0' : '#1a202c',
+    hover: {
+      borderColor: isDarkMode ? '#63b3ed' : '#4299e1',
+      boxShadow: isDarkMode 
+        ? '0 0 0 2px rgba(99, 179, 237, 0.2)'
+        : '0 1px 3px rgba(0, 0, 0, 0.1)'
+    }
+  },
+  text: {
+    primary: isDarkMode ? '#e2e8f0' : '#1a202c',
+    secondary: isDarkMode ? '#a0aec0' : '#4a5568',
+  },
+  drawer: {
+    background: isDarkMode ? '#1a202c' : '#ffffff',
+    border: isDarkMode ? '#2d3748' : '#e2e8f0',
+    header: {
+      background: isDarkMode ? '#1a202c' : '#ffffff',
+      borderBottom: isDarkMode ? '1px solid #2d3748' : '1px solid #e2e8f0',
+    }
+  }
+});
+
+export default function BuilderCanvas({ initialData, workflowId }) {
+  const { isDarkMode } = useTheme();
+  const theme = getThemeStyles(isDarkMode);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
@@ -100,6 +142,9 @@ export default function BuilderCanvas() {
   const [testInput, setTestInput] = useState("");
   const [testMessages, setTestMessages] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
+  const [testLoading, setTestLoading] = useState(false);
+  const [testResult, setTestResult] = useState("");
+  const [activeWorkflowId, setActiveWorkflowId] = useState(null);
   
   // Settings state
   const [settings, setSettings] = useState({
@@ -115,56 +160,152 @@ export default function BuilderCanvas() {
     enableAnimations: true
   });
   
-  const initialNodes = [
-    {
-      id: "start-1",
-      type: "custom",
-      data: { 
-        label: "Start",
-        nodeType: "start",
-        description: "Workflow entry point",
-        color: "#52c41a"
+  // Initialize nodes and edges from initialData if available
+  const getInitialNodes = () => {
+    if (initialData?.nodes?.length > 0) {
+      return initialData.nodes;
+    }
+    
+    // Default nodes if no initial data
+    return [
+      {
+        id: `start-${Date.now()}`,
+        type: "custom",
+        data: { 
+          label: "Start",
+          nodeType: "start",
+          description: "Workflow entry point",
+          color: "#52c41a"
+        },
+        position: { x: 100, y: 100 }
       },
-      position: { x: 100, y: 100 }
-    },
-    {
-      id: "llm-1",
-      type: "custom",
-      data: { 
-        label: "LLM Node",
-        nodeType: "llm",
-        description: "Large Language Model processing",
-        color: "#1890ff"
+      {
+        id: `llm-${Date.now() + 1}`,
+        type: "custom",
+        data: { 
+          label: "LLM Node",
+          nodeType: "llm",
+          description: "LLM Node",
+          color: "#6366f1"
+        },
+        position: { x: 400, y: 100 }
       },
-      position: { x: 400, y: 100 }
-    },
-  ];
+      {
+        id: `answer-${Date.now() + 2}`,
+        type: "custom",
+        data: { 
+          label: "Answer",
+          nodeType: "answer",
+          description: "Answer Node",
+          color: "#f59e0b"
+        },
+        position: { x: 700, y: 100 }
+      }
+    ];
+  };
+
+  // Get initial nodes with timestamp-based IDs
+  const initialNodes = getInitialNodes();
+  
+  // Create an initial edge connecting the start node to the LLM node
+  const getInitialEdges = () => {
+    if (initialData?.edges?.length > 0) {
+      return initialData.edges;
+    }
+    
+    // Default edge connecting start to LLM if no initial data
+    return [
+      {
+        id: `edge-${Date.now()}`,
+        source: initialNodes[0].id,
+        target: initialNodes[1].id,
+        style: {
+          stroke: isDarkMode ? '#94a3b8' : '#64748b',
+          strokeWidth: 2,
+          opacity: 0.9,
+        },
+        markerEnd: {
+          type: 'arrowclosed',
+          color: isDarkMode ? '#94a3b8' : '#64748b',
+        },
+        animated: true
+      },
+      {
+        id: `edge-${Date.now() + 1}`,
+        source: initialNodes[1].id,
+        target: initialNodes[2].id,
+        style: {
+          stroke: isDarkMode ? '#94a3b8' : '#64748b',
+          strokeWidth: 2,
+          opacity: 0.9,
+        },
+        markerEnd: {
+          type: 'arrowclosed',
+          color: isDarkMode ? '#94a3b8' : '#64748b',
+        },
+        animated: true
+      }     
+    ];
+  };
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([], {
-    type: 'smoothstep',
-    style: { stroke: '#555', strokeWidth: 2 },
-    markerEnd: {
-      type: 'arrowclosed',
-      color: '#555',
-    },
-  });
+  const [edges, setEdges, onEdgesChange] = useEdgesState(getInitialEdges());
 
   const onConnect = useCallback(
-    (params) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
+    (params) => setEdges((eds) => addEdge({
+      ...params,
+      style: {
+        stroke: isDarkMode ? '#94a3b8' : '#64748b',
+        strokeWidth: 2,
+        opacity: 0.9,
+      },
+      markerEnd: {
+        type: 'arrowclosed',
+        color: isDarkMode ? '#94a3b8' : '#64748b',
+      },
+      animated: true
+    }, eds)),
+    [setEdges, isDarkMode]
   );
+
+  // Get appropriate colors based on theme
+  const getThemeColors = () => ({
+    text: isDarkMode ? '#e2e8f0' : '#1a202c',
+    textSecondary: isDarkMode ? '#a0aec0' : '#4a5568',
+    background: isDarkMode ? '#1f1f1f' : '#ffffff',
+    backgroundSecondary: isDarkMode ? '#2d3748' : '#f7fafc',
+    border: isDarkMode ? '#4a5568' : '#e2e8f0',
+    primary: isDarkMode ? '#63b3ed' : '#3182ce',
+    nodeBackground: isDarkMode ? '#2d3748' : '#ffffff',
+    nodeBorder: isDarkMode ? '#4a5568' : '#e2e8f0',
+    nodeText: isDarkMode ? '#e2e8f0' : '#1a202c',
+    nodeTextSecondary: isDarkMode ? '#a0aec0' : '#4a5568',
+  });
+
+  const colors = getThemeColors();
 
   // Custom node component with right/left handles
   const CustomNode = ({ data, id }) => {
+    const nodeColors = getThemeColors();
     return (
       <div style={{
-        background: `${data.color || '#6366f1'}15`,
-        border: `2px solid ${data.color || '#6366f1'}`,
+        background: isDarkMode 
+          ? `${data.color || '#6366f1'}20` 
+          : `${data.color || '#6366f1'}10`,
+        border: `2px solid ${data.color || (isDarkMode ? '#4a5568' : '#6366f1')}`,
         borderRadius: "8px",
         padding: "16px",
         minWidth: "200px",
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        boxShadow: isDarkMode 
+          ? '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+          : '0 2px 8px rgba(0,0,0,0.1)',
+        transition: 'all 0.2s ease-in-out',
+        '&:hover': {
+          borderColor: data.color || (isDarkMode ? '#63b3ed' : '#4f46e5'),
+          boxShadow: isDarkMode 
+            ? '0 0 0 2px rgba(99, 179, 237, 0.2)'
+            : '0 0 0 2px rgba(99, 102, 241, 0.2)'
+        }
       }}>
         {id !== 'start-1' && (
           <Handle 
@@ -183,7 +324,7 @@ export default function BuilderCanvas() {
           textAlign: 'left', 
           fontWeight: '600',
           marginBottom: '8px',
-          color: data.color || '#333',
+          color: isDarkMode ? '#e2e8f0' : (data.color || '#333'),
           fontSize: '14px',
           fontFamily: 'Montserrat, sans-serif'
         }}>
@@ -191,7 +332,7 @@ export default function BuilderCanvas() {
         </div>
         <div style={{ 
           fontSize: '12px', 
-          color: '#666',
+          color: isDarkMode ? '#a0aec0' : '#4a5568',
           marginBottom: '8px',
           fontFamily: 'Montserrat, sans-serif'
         }}>
@@ -207,7 +348,7 @@ export default function BuilderCanvas() {
               width: '24px',
               height: '24px',
               borderRadius: '4px',
-              background: data.color ? `${data.color}20` : '#f0f0f0',
+              background: isDarkMode ? '#2d3748' : '#e2e8f0',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
@@ -236,9 +377,15 @@ export default function BuilderCanvas() {
     );
   };
 
-  const customNodeTypes = useRef({
-    custom: CustomNode
-  }).current;
+  // Edge types mapping
+  const edgeTypes = {
+    custom: CustomEdge,
+  };
+
+  // Node types mapping
+  const customNodeTypes = {
+    custom: CustomNode,
+  };
 
   const addNode = (nodeType) => {
     const id = `${nodeType.type}-${Date.now()}`;
@@ -288,12 +435,78 @@ export default function BuilderCanvas() {
     event.dataTransfer.dropEffect = 'move';
   }, []);
 
+  const onInit = useCallback((instance) => {
+    // You can use the instance if needed later
+    // For example: instance.fitView();
+  }, []);
+
   const exportJson = () => {
     const payload = { nodes, edges };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: "application/json",
     });
     saveAs(blob, "workflow.json");
+  };
+
+  const saveWorkflow = async () => {
+    if (!workflowId) {
+      console.error('No project ID provided');
+      return;
+    }
+    
+    try {
+      // Create a deep copy of nodes to avoid mutating the original state
+      const nodesWithSettings = nodes.map(node => {
+        // For LLM nodes, ensure all settings are included
+        if (node.data.nodeType === 'llm') {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              // Ensure all LLM settings are included
+              settings: {
+                ollamaBaseUrl: node.data.ollamaBaseUrl || 'http://localhost:11434',
+                model: node.data.model || 'llama2',
+                temperature: node.data.temperature ?? 0.7,
+                maxTokens: node.data.maxTokens ?? 2048,
+                contextWindow: node.data.contextWindow ?? 4000,
+                topP: node.data.topP ?? 0.9,
+                streaming: node.data.streaming ?? true,
+                systemPrompt: node.data.systemPrompt || ''
+              },
+              // Keep all other data properties
+              ...Object.keys(node.data).reduce((acc, key) => {
+                if (!['ollamaBaseUrl', 'model', 'temperature', 'maxTokens', 
+                      'contextWindow', 'topP', 'streaming', 'systemPrompt'].includes(key)) {
+                  acc[key] = node.data[key];
+                }
+                return acc;
+              }, {})
+            }
+          };
+        }
+        // For other node types, include all data as is
+        return node;
+      });
+
+      const payload = {
+        nodes: nodesWithSettings,
+        edges: edges.map(edge => ({
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          type: edge.type || 'smoothstep'
+        }))
+      };
+      
+      const response = await updateWorkflow(workflowId, payload);
+      message.success('Workflow saved successfully');
+      return response;
+    } catch (error) {
+      console.error('Error saving workflow:', error);
+      message.error('Failed to save workflow: ' + (error.response?.data?.message || error.message));
+      throw error;
+    }
   };
 
   const runWorkflowTest = async () => {
@@ -310,17 +523,30 @@ export default function BuilderCanvas() {
     setTestMessages(prev => [...prev, userMessage]);
     setTestInput("");
     
-    // Simulate workflow execution
-    setTimeout(() => {
+    try {
+      const response = await executeWorkflow(workflowId, testInput);
       const botMessage = {
         id: Date.now() + 1,
         type: "assistant",
-        content: `Workflow executed successfully! Input: "${userMessage.content}" was processed through ${nodes.length} nodes.`,
-        timestamp: new Date().toLocaleTimeString()
+        content: response.data.result.result || 'Workflow executed successfully',
+        processSteps: response.data.result.process_steps || [],
+        showProcess: false,
+        timestamp: new Date().toISOString()
       };
       setTestMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error('Error executing workflow:', error);
+      message.error('Failed to execute workflow: ' + (error.response?.data?.message || error.message));
+      const errorMessage = {
+        id: Date.now() + 1,
+        type: "assistant",
+        content: 'Failed to execute workflow: ' + (error.response?.data?.message || error.message),
+        timestamp: new Date().toLocaleTimeString()
+      };
+      setTestMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsRunning(false);
-    }, 2000);
+    }
   };
 
   const clearTestMessages = () => {
@@ -354,6 +580,27 @@ export default function BuilderCanvas() {
     setNodeSettingsVisible(true);
   };
 
+  const handleDeleteNode = useCallback(() => {
+    if (!selectedNode) return;
+    
+    // Remove the node
+    setNodes((nds) => nds.filter((node) => node.id !== selectedNode.id));
+    
+    // Remove any edges connected to this node
+    setEdges((eds) => 
+      eds.filter(
+        (edge) => 
+          edge.source !== selectedNode.id && edge.target !== selectedNode.id
+      )
+    );
+    
+    // Close the settings drawer
+    setNodeSettingsVisible(false);
+    setSelectedNode(null);
+    
+    message.success('Node deleted successfully');
+  }, [selectedNode, setNodes, setEdges]);
+
   const updateNodeData = (nodeId, newData) => {
     setNodes((nds) =>
       nds.map((node) =>
@@ -372,15 +619,39 @@ export default function BuilderCanvas() {
     }
   };
 
+  // Get node type configuration with theme support
+  const getNodeTypeConfig = () => {
+    return nodeTypesConfig.map(section => ({
+      ...section,
+      nodes: section.nodes.map(node => ({
+        ...node,
+        style: {
+          background: isDarkMode ? 'rgba(45, 55, 72, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+          border: `1px solid ${isDarkMode ? '#4a5568' : '#e2e8f0'}`,
+          color: isDarkMode ? '#e2e8f0' : '#1a202c',
+          '&:hover': {
+            borderColor: isDarkMode ? '#63b3ed' : '#3182ce',
+            boxShadow: isDarkMode 
+              ? '0 0 0 2px rgba(99, 179, 237, 0.2)'
+              : '0 1px 3px rgba(0, 0, 0, 0.1)'
+          }
+        },
+      })),
+    }));
+  };
+
+  const nodeTypeConfig = getNodeTypeConfig();
+
   return (
-    <div style={{ 
-      height: "100%", 
-      display: "flex", 
-      flexDirection: "column",
-      overflow: "hidden",
-      background: "#f5f5f5"
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      width: '100%',
+      overflow: 'hidden',
+      background: isDarkMode ? '#1a202c' : '#f8fafc'
     }}>
-      {/* Dify-style toolbar */}
+      {/* Toolbar */}
       <div style={{
         background: "#fff",
         borderBottom: "1px solid #e8e8e8",
@@ -394,7 +665,7 @@ export default function BuilderCanvas() {
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <NodeIndexOutlined style={{ fontSize: "20px", color: "#1890ff" }} />
             <Title level={5} style={{ margin: 0, color: "#262626" }}>
-              Workflow Studio
+              Workflow
             </Title>
           </div>
           <Divider type="vertical" style={{ height: "20px" }} />
@@ -424,48 +695,69 @@ export default function BuilderCanvas() {
           >
             {previewVisible ? "Hide Preview" : "Preview"}
           </Button>
-          <Button icon={<PlayCircleOutlined />} type="primary" onClick={runWorkflowTest}>Test Run</Button>
+          <Button icon={<PlayCircleOutlined />} type="primary" onClick={runWorkflowTest}>Publish</Button>
           <Button icon={<DownloadOutlined />} onClick={exportJson}>Export</Button>
+          <Button 
+            type="primary" 
+            icon={<SaveOutlined />} 
+            onClick={saveWorkflow}
+            loading={false} // You can add a loading state if needed
+          >
+            Save Workflow
+          </Button>
         </Space>
       </div>
 
       {/* Main content area with canvas and preview */}
-      <div style={{ flex: 1, display: "flex", background: "#fafafa" }}>
+      <div style={{
+        flex: 1,
+        position: 'relative',
+        width: '100%',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'row'
+      }}>
         {/* Canvas area */}
-        <div style={{ 
-          flex: previewVisible ? 1 : 1, 
-          position: "relative", 
-          background: "#fafafa",
-          transition: "all 0.3s ease"
+        <div style={{
+          flex: 1,
+          position: 'relative',
+          height: '100%',
+          minHeight: '500px',
+          background: isDarkMode ? '#1a202c' : '#f8fafc',
+          transition: 'all 0.3s ease',
+          overflow: 'hidden'
         }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
           nodeTypes={customNodeTypes}
+          edgeTypes={edgeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
-          onNodeClick={onNodeClick}
+          onInit={onInit}
           onDrop={onDrop}
           onDragOver={onDragOver}
+          onNodeClick={onNodeClick}
           fitView
-          nodesDraggable={true}
-          nodesConnectable={true}
-          elementsSelectable={true}
+          snapToGrid={settings.snapToGrid}
+          snapGrid={[15, 15]}
           defaultEdgeOptions={{
-            type: 'smoothstep',
-            style: { 
-              stroke: '#8c8c8c', 
+            type: 'custom', // Use our custom edge type
+            animated: settings.enableAnimations,
+            style: {
+              stroke: isDarkMode ? '#94a3b8' : '#64748b',
               strokeWidth: 2,
-              borderRadius: '4px'
+              opacity: 0.9,
             },
             markerEnd: {
               type: 'arrowclosed',
-              color: '#8c8c8c',
-              width: 12,
-              height: 12
+              color: isDarkMode ? '#94a3b8' : '#64748b',
             },
-            animated: true
+            pathOptions: {
+              borderRadius: 8,
+              offset: 10, // Add some offset between parallel edges
+            },
           }}
           connectionLineStyle={{
             stroke: '#8c8c8c',
@@ -473,16 +765,24 @@ export default function BuilderCanvas() {
             strokeDasharray: '5,5'
           }}
           style={{ 
-            width: "100%", 
-            height: "100%", 
-            background: "#fafafa"
+            width: '100%',
+            height: '100%',
+            background: isDarkMode ? '#1a202c' : '#f8fafc'
+          }}
+          nodeOrigin={[0.5, 0.5]}
+          fitViewOptions={{
+            padding: 0.2,
+            includeHiddenNodes: false,
           }}
         >
           <Background 
-            color="#d9d9d9" 
-            gap={16} 
+            variant={settings.backgroundType}
+            gap={16}
             size={1}
-            style={{ opacity: 0.5 }}
+            color={isDarkMode ? '#2d3748' : '#e2e8f0'}
+            style={{
+              backgroundColor: isDarkMode ? '#1a202c' : '#f8fafc'
+            }}
           />
           <MiniMap
             nodeColor={(node) => {
@@ -497,29 +797,38 @@ export default function BuilderCanvas() {
               borderRadius: "6px",
             }}
           />
-          <Controls
+          <Controls 
             style={{
-              background: "rgba(255, 255, 255, 0.95)",
-              border: "1px solid #d9d9d9",
-              borderRadius: "6px",
+              backgroundColor: isDarkMode ? '#2d3748' : '#ffffff',
+              border: `1px solid ${isDarkMode ? '#4a5568' : '#e2e8f0'}`,
+              borderRadius: '6px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              padding: '4px'
             }}
+            position="bottom-right"
           />
           <Panel position="top-center">
             <div style={{
-              background: "rgba(255, 255, 255, 0.95)",
-              padding: "8px 16px",
-              borderRadius: "20px",
-              border: "1px solid #d9d9d9",
-              fontSize: "12px",
-              color: "#666"
+              background: isDarkMode ? 'rgba(45, 55, 72, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+              padding: '8px 16px',
+              borderRadius: '20px',
+              border: `1px solid ${isDarkMode ? '#4a5568' : '#e2e8f0'}`,
+              fontSize: '13px',
+              color: isDarkMode ? '#e2e8f0' : '#4a5568',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              backdropFilter: 'blur(4px)'
             }}>
-              Drag nodes from the panel to build your workflow
+              <MenuOutlined style={{ color: isDarkMode ? '#a0aec0' : '#718096' }} />
+              <span>Drag nodes from the panel to build your workflow</span>
             </div>
           </Panel>
         </ReactFlow>
         </div>
 
-        {/* Preview Panel - Dify.ai style */}
+        {/* Preview Panel */}
         {previewVisible && (
           <div style={{
             width: "400px",
@@ -560,16 +869,6 @@ export default function BuilderCanvas() {
               </div>
             </div>
 
-            {/* Workflow Info */}
-            <div style={{
-              padding: "12px 16px",
-              background: "#f0f9ff",
-              borderBottom: "1px solid #e8e8e8"
-            }}>
-              <Text style={{ fontSize: "12px", color: "#666" }}>
-                Nodes: {nodes.length} | Connections: {edges.length}
-              </Text>
-            </div>
 
             {/* Test Messages Area */}
             <div style={{
@@ -623,6 +922,59 @@ export default function BuilderCanvas() {
                               fontSize: "13px",
                               lineHeight: "1.4"
                             }}>
+                              {message.type === "assistant" && message.processSteps && (
+                                <div style={{ marginBottom: "8px", background: "#f0f9ff", padding: "8px", borderRadius: "8px" }}>
+                                  <div 
+                                    style={{ 
+                                      display: "flex", 
+                                      alignItems: "center", 
+                                      gap: "8px", 
+                                      marginBottom: message.showProcess ? "4px" : 0,
+                                      cursor: "pointer"
+                                    }}
+                                    onClick={() => {
+                                      setTestMessages(prev => prev.map(msg => 
+                                        msg.id === message.id 
+                                          ? { ...msg, showProcess: !msg.showProcess } 
+                                          : msg
+                                      ));
+                                    }}
+                                  >
+                                    {message.showProcess 
+                                      ? <DownOutlined style={{ color: "#1890ff", fontSize: "12px" }} />
+                                      : <RightOutlined style={{ color: "#1890ff", fontSize: "12px" }} />
+                                    }
+                                    <Text strong style={{ fontSize: "12px" }}>Workflow Process</Text>
+                                    <Text type="secondary" style={{ fontSize: "11px", marginLeft: "auto" }}>
+                                      {message.processSteps.length} steps
+                                    </Text>
+                                  </div>
+                                  {message.showProcess && message.processSteps.map((step, stepIdx) => (
+                                    <div key={stepIdx} style={{
+                                      marginTop: "8px",
+                                      padding: "8px",
+                                      background: "#fff",
+                                      borderRadius: "4px",
+                                      border: "1px solid #e8e8f0"
+                                    }}>
+                                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                                        <div style={{
+                                          width: "6px",
+                                          height: "6px",
+                                          borderRadius: "50%",
+                                          background: step.status === "completed" ? "#52c41a" : "#1890ff"
+                                        }} />
+                                        <Text strong style={{ fontSize: "11px" }}>{step.label} ({step.type})</Text>
+                                        <Text type="secondary" style={{ fontSize: "11px", marginLeft: "auto" }}>{step.time}ms</Text>
+                                      </div>
+                                      <div style={{ fontSize: "11px", color: "#666", marginTop: "4px" }}>
+                                        <div><Text type="secondary">Input:</Text> {step.input || '-'}</div>
+                                        <div style={{ marginTop: "2px" }}><Text type="secondary">Output:</Text> {step.output || '-'}</div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                               {message.content}
                             </div>
                             <div style={{
@@ -696,11 +1048,16 @@ export default function BuilderCanvas() {
         )}
       </div>
 
-      {/* Node palette drawer - Dify style */}
+      {/* Node palette drawer */}
       <Drawer
         title={
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <PlusOutlined style={{ color: "#1890ff" }} />
+          <div style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            gap: "8px",
+            color: isDarkMode ? '#e2e8f0' : '#1a202c'
+          }}>
+            <PlusOutlined style={{ color: "#4299e1" }} />
             <span>Add Nodes</span>
           </div>
         }
@@ -708,64 +1065,127 @@ export default function BuilderCanvas() {
         onClose={() => setDrawerVisible(false)}
         open={drawerVisible}
         width={320}
-        bodyStyle={{ padding: "16px" }}
+        headerStyle={{
+          background: isDarkMode ? '#1a202c' : '#ffffff',
+          borderBottom: `1px solid ${isDarkMode ? '#2d3748' : '#e2e8f0'}`,
+          padding: '16px 24px',
+          margin: 0,
+        }}
+        bodyStyle={{
+          background: isDarkMode ? '#1a202c' : '#ffffff',
+          padding: '16px',
+          overflowY: 'auto'
+        }}
+        drawerStyle={{
+          background: isDarkMode ? '#1a202c' : '#ffffff',
+        }}
       >
         {nodeTypesConfig.map((category, categoryIndex) => (
-          <div key={categoryIndex} style={{ marginBottom: "24px" }}>
-            <Text strong style={{ 
-              fontSize: "14px", 
-              color: "#262626",
-              marginBottom: "12px",
-              display: "block"
+          <div key={categoryIndex} style={{ marginBottom: '24px' }}>
+            <Text style={{ 
+              fontSize: '12px',
+              fontWeight: 600,
+              color: isDarkMode ? '#a0aec0' : '#718096',
+              marginBottom: '12px',
+              display: 'block',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              paddingLeft: '4px'
             }}>
               {category.category}
             </Text>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {category.nodes.map((nodeType, nodeIndex) => (
-                <div
-                  key={nodeIndex}
-                  draggable
-                  onDragStart={(event) => onDragStart(event, nodeType)}
-                  onClick={() => addNode(nodeType)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    padding: "12px",
-                    background: "#fff",
-                    border: `1px solid ${nodeType.color}30`,
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                    transition: "all 0.2s ease",
-                    borderLeft: `4px solid ${nodeType.color}`
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.boxShadow = `0 4px 12px ${nodeType.color}20`;
-                    e.target.style.transform = "translateY(-1px)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.boxShadow = "none";
-                    e.target.style.transform = "translateY(0)";
-                  }}
-                >
-                  <div style={{ 
-                    color: nodeType.color, 
-                    fontSize: "16px",
-                    display: "flex",
-                    alignItems: "center"
-                  }}>
-                    {nodeType.icon}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: "500", fontSize: "13px" }}>
-                      {nodeType.label}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {category.nodes.map((nodeType, nodeIndex) => {
+                const nodeBg = isDarkMode ? 'rgba(45, 55, 72, 0.8)' : 'rgba(255, 255, 255, 0.9)';
+                const borderColor = isDarkMode ? 'rgba(74, 85, 104, 0.5)' : 'rgba(226, 232, 240, 0.8)';
+                
+                return (
+                  <div
+                    key={nodeIndex}
+                    draggable
+                    onDragStart={(event) => onDragStart(event, nodeType)}
+                    onClick={() => addNode(nodeType)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px',
+                      background: nodeBg,
+                      border: `1px solid ${borderColor}`,
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      backdropFilter: 'blur(4px)',
+                      borderLeft: `4px solid ${nodeType.color}`,
+                      '&:hover': {
+                        borderColor: isDarkMode ? '#63b3ed' : '#3182ce',
+                        boxShadow: isDarkMode 
+                          ? '0 4px 12px rgba(99, 179, 237, 0.2)'
+                          : '0 2px 8px rgba(0, 0, 0, 0.1)',
+                        transform: 'translateY(-2px)'
+                      }
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.boxShadow = isDarkMode 
+                        ? `0 4px 12px ${nodeType.color}20`
+                        : '0 2px 8px rgba(0, 0, 0, 0.1)';
+                      e.target.style.transform = 'translateY(-2px)';
+                      e.target.style.borderColor = isDarkMode 
+                        ? `${nodeType.color}80` 
+                        : `${nodeType.color}60`;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.boxShadow = 'none';
+                      e.target.style.transform = 'translateY(0)';
+                      e.target.style.borderColor = borderColor;
+                    }}
+                  >
+                    <div style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '6px',
+                      background: `${nodeType.color}20`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: nodeType.color,
+                      fontSize: '16px',
+                      flexShrink: 0,
+                      transition: 'all 0.2s ease'
+                    }}>
+                      {React.cloneElement(nodeType.icon, { 
+                        style: { 
+                          color: nodeType.color,
+                          transition: 'all 0.2s ease'
+                        } 
+                      })}
                     </div>
-                    <div style={{ fontSize: "11px", color: "#8c8c8c" }}>
-                      Click or drag to add
+                    <div style={{ overflow: 'hidden' }}>
+                      <div style={{ 
+                        fontWeight: 500, 
+                        fontSize: '13px',
+                        color: isDarkMode ? '#e2e8f0' : '#1a202c',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        transition: 'color 0.2s ease'
+                      }}>
+                        {nodeType.label}
+                      </div>
+                      <div style={{ 
+                        fontSize: '11px', 
+                        color: isDarkMode ? '#a0aec0' : '#718096',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        transition: 'color 0.2s ease'
+                      }}>
+                        Click or drag to add
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ))}
@@ -961,32 +1381,50 @@ export default function BuilderCanvas() {
       {/* Node Settings drawer */}
       <Drawer
         title={
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            {selectedNode && (
-              <>
-                <div style={{ 
-                  color: selectedNode.data.nodeType === 'llm' ? '#6366f1' : 
-                        selectedNode.data.nodeType === 'knowledge' ? '#10b981' :
-                        selectedNode.data.nodeType === 'answer' ? '#f59e0b' :
-                        selectedNode.data.nodeType === 'agent' ? '#8b5cf6' :
-                        selectedNode.data.nodeType === 'classifier' ? '#10b981' :
-                        selectedNode.data.nodeType === 'ifelse' ? '#06b6d4' :
-                        selectedNode.data.nodeType === 'code' ? '#6366f1' :
-                        selectedNode.data.nodeType === 'http_request' ? '#8b5cf6' : '#666',
-                  fontSize: "16px"
-                }}>
-                  {selectedNode.data.nodeType === 'llm' ? <RobotOutlined /> :
-                   selectedNode.data.nodeType === 'knowledge' ? <DatabaseOutlined /> :
-                   selectedNode.data.nodeType === 'answer' ? <MessageOutlined /> :
-                   selectedNode.data.nodeType === 'agent' ? <SmileOutlined /> :
-                   selectedNode.data.nodeType === 'classifier' ? <FilterOutlined /> :
-                   selectedNode.data.nodeType === 'ifelse' ? <BranchesOutlined /> :
-                   selectedNode.data.nodeType === 'code' ? <CodeOutlined /> :
-                   selectedNode.data.nodeType === 'http_request' ? <ApiOutlined /> : <SettingOutlined />}
-                </div>
-                <span>{selectedNode.data.label} Settings</span>
-              </>
-            )}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              {selectedNode && (
+                <>
+                  <div style={{ 
+                    color: selectedNode.data.nodeType === 'llm' ? '#6366f1' : 
+                          selectedNode.data.nodeType === 'knowledge' ? '#10b981' :
+                          selectedNode.data.nodeType === 'answer' ? '#f59e0b' :
+                          selectedNode.data.nodeType === 'agent' ? '#8b5cf6' :
+                          selectedNode.data.nodeType === 'classifier' ? '#10b981' :
+                          selectedNode.data.nodeType === 'ifelse' ? '#06b6d4' :
+                          selectedNode.data.nodeType === 'code' ? '#6366f1' :
+                          selectedNode.data.nodeType === 'http_request' ? '#8b5cf6' : '#666',
+                    fontSize: "16px"
+                  }}>
+                    {selectedNode.data.nodeType === 'llm' ? <RobotOutlined /> :
+                     selectedNode.data.nodeType === 'knowledge' ? <DatabaseOutlined /> :
+                     selectedNode.data.nodeType === 'answer' ? <MessageOutlined /> :
+                     selectedNode.data.nodeType === 'agent' ? <SmileOutlined /> :
+                     selectedNode.data.nodeType === 'classifier' ? <FilterOutlined /> :
+                     selectedNode.data.nodeType === 'ifelse' ? <BranchesOutlined /> :
+                     selectedNode.data.nodeType === 'code' ? <CodeOutlined /> :
+                     selectedNode.data.nodeType === 'http_request' ? <ApiOutlined /> : <SettingOutlined />}
+                  </div>
+                  <span>{selectedNode.data.label} Settings</span>
+                </>
+              )}
+            </div>
+            <Button 
+              type="primary" 
+              danger 
+              icon={<DeleteOutlined />} 
+              onClick={handleDeleteNode}
+              style={{
+                marginLeft: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: 500,
+                boxShadow: '0 2px 0 rgba(255, 77, 79, 0.2)'
+              }}
+            >
+              Delete
+            </Button>
           </div>
         }
         placement="right"
@@ -1034,45 +1472,29 @@ export default function BuilderCanvas() {
                   <div>
                     <Text strong style={{ display: "block", marginBottom: "8px" }}>Ollama Base URL</Text>
                     <Input
-                      value={selectedNode.data.baseUrl || 'http://localhost:11434'}
-                      onChange={(e) => updateNodeData(selectedNode.id, { baseUrl: e.target.value })}
+                      value={selectedNode.data.settings?.ollamaBaseUrl || 'http://localhost:11434'}
+                      onChange={(e) => updateNodeData(selectedNode.id, { settings: { ...selectedNode.data.settings, ollamaBaseUrl: e.target.value } })}
                       placeholder="http://localhost:11434"
                     />
                   </div>
                   
                   <div>
                     <Text strong style={{ display: "block", marginBottom: "8px" }}>Model</Text>
-                    <Select
-                      value={selectedNode.data.model || 'llama2'}
-                      onChange={(value) => updateNodeData(selectedNode.id, { model: value })}
-                      style={{ width: "100%" }}
-                      showSearch
-                      placeholder="Select or type model name"
-                    >
-                      <Select.Option value="llama2">Llama 2</Select.Option>
-                      <Select.Option value="llama2:13b">Llama 2 13B</Select.Option>
-                      <Select.Option value="llama2:70b">Llama 2 70B</Select.Option>
-                      <Select.Option value="codellama">Code Llama</Select.Option>
-                      <Select.Option value="codellama:13b">Code Llama 13B</Select.Option>
-                      <Select.Option value="mistral">Mistral</Select.Option>
-                      <Select.Option value="mixtral">Mixtral</Select.Option>
-                      <Select.Option value="neural-chat">Neural Chat</Select.Option>
-                      <Select.Option value="starling-lm">Starling</Select.Option>
-                      <Select.Option value="vicuna">Vicuna</Select.Option>
-                      <Select.Option value="orca-mini">Orca Mini</Select.Option>
-                    </Select>
+                    <Input
+                      value={selectedNode.data.settings?.model || 'llama2'}
+                      onChange={(e) => updateNodeData(selectedNode.id, { settings: { ...selectedNode.data.settings, model: e.target.value } })}
+                      placeholder="Enter model name"
+                    />
                   </div>
                   
                   <div>
-                    <Text strong style={{ display: "block", marginBottom: "8px" }}>
-                      Temperature: {selectedNode.data.temperature || 0.7}
-                    </Text>
+                    <Text strong style={{ display: "block", marginBottom: "8px" }}>Temperature</Text>
                     <Slider
                       min={0}
                       max={2}
                       step={0.1}
-                      value={selectedNode.data.temperature || 0.7}
-                      onChange={(value) => updateNodeData(selectedNode.id, { temperature: value })}
+                      value={selectedNode.data.settings?.temperature || 0.7}
+                      onChange={(value) => updateNodeData(selectedNode.id, { settings: { ...selectedNode.data.settings, temperature: value } })}
                       marks={{
                         0: '0',
                         0.5: '0.5',
@@ -1084,15 +1506,63 @@ export default function BuilderCanvas() {
                   </div>
 
                   <div>
+                    <Text strong style={{ display: "block", marginBottom: "8px" }}>Max Tokens</Text>
+                    <Slider
+                      min={256}
+                      max={4096}
+                      step={256}
+                      value={selectedNode.data.settings?.maxTokens || 2048}
+                      onChange={(value) => updateNodeData(selectedNode.id, { settings: { ...selectedNode.data.settings, maxTokens: value } })}
+                      marks={{
+                        256: '256',
+                        2048: '2K',
+                        4096: '4K'
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <Text strong style={{ display: "block", marginBottom: "8px" }}>Context Window</Text>
+                    <Slider
+                      min={1024}
+                      max={8192}
+                      step={1024}
+                      value={selectedNode.data.settings?.contextWindow || 4000}
+                      onChange={(value) => updateNodeData(selectedNode.id, { settings: { ...selectedNode.data.settings, contextWindow: value } })}
+                      marks={{
+                        1024: '1K',
+                        4096: '4K',
+                        8192: '8K'
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <Text strong style={{ display: "block", marginBottom: "8px" }}>Top P</Text>
+                    <Slider
+                      min={0}
+                      max={1}
+                      step={0.1}
+                      value={selectedNode.data.settings?.topP || 0.9}
+                      onChange={(value) => updateNodeData(selectedNode.id, { settings: { ...selectedNode.data.settings, topP: value } })}
+                      marks={{
+                        0: '0',
+                        0.5: '0.5',
+                        1: '1'
+                      }}
+                    />
+                  </div>
+
+                  <div>
                     <Text strong style={{ display: "block", marginBottom: "8px" }}>
-                      Max Tokens: {selectedNode.data.maxTokens || 2048}
+                      Max Tokens: {selectedNode.data.settings?.maxTokens || 2048}
                     </Text>
                     <Slider
                       min={256}
                       max={8192}
                       step={256}
-                      value={selectedNode.data.maxTokens || 2048}
-                      onChange={(value) => updateNodeData(selectedNode.id, { maxTokens: value })}
+                      value={selectedNode.data.settings?.maxTokens || 2048}
+                      onChange={(value) => updateNodeData(selectedNode.id, { settings: { ...selectedNode.data.settings, maxTokens: value } })}
                       marks={{
                         256: '256',
                         1024: '1K',
@@ -1108,8 +1578,8 @@ export default function BuilderCanvas() {
                       Context Window: {selectedNode.data.contextWindow || 4096}
                     </Text>
                     <Select
-                      value={selectedNode.data.contextWindow || 4096}
-                      onChange={(value) => updateNodeData(selectedNode.id, { contextWindow: value })}
+                      value={selectedNode.data.settings?.contextWindow || 4096}
+                      onChange={(value) => updateNodeData(selectedNode.id, { settings: { ...selectedNode.data.settings, contextWindow: value } })}
                       style={{ width: "100%" }}
                     >
                       <Select.Option value={2048}>2K tokens</Select.Option>
@@ -1128,8 +1598,8 @@ export default function BuilderCanvas() {
                       min={0.1}
                       max={1}
                       step={0.1}
-                      value={selectedNode.data.topP || 0.9}
-                      onChange={(value) => updateNodeData(selectedNode.id, { topP: value })}
+                      value={selectedNode.data.settings?.topP || 0.9}
+                      onChange={(value) => updateNodeData(selectedNode.id, { settings: { ...selectedNode.data.settings, topP: value } })}
                       marks={{
                         0.1: '0.1',
                         0.5: '0.5',
@@ -1147,16 +1617,16 @@ export default function BuilderCanvas() {
                       </div>
                     </div>
                     <Switch
-                      checked={selectedNode.data.stream || true}
-                      onChange={(checked) => updateNodeData(selectedNode.id, { stream: checked })}
+                      checked={selectedNode.data.settings?.streaming ?? true}
+                      onChange={(checked) => updateNodeData(selectedNode.id, { settings: { ...selectedNode.data.settings, streaming: checked } })}
                     />
                   </div>
 
                   <div>
                     <Text strong style={{ display: "block", marginBottom: "8px" }}>System Prompt</Text>
                     <Input.TextArea
-                      value={selectedNode.data.systemPrompt || ''}
-                      onChange={(e) => updateNodeData(selectedNode.id, { systemPrompt: e.target.value })}
+                      value={selectedNode.data.settings?.systemPrompt || ''}
+                      onChange={(e) => updateNodeData(selectedNode.id, { settings: { ...selectedNode.data.settings, systemPrompt: e.target.value } })}
                       placeholder="Enter system prompt"
                       rows={4}
                     />
@@ -1172,15 +1642,15 @@ export default function BuilderCanvas() {
                 </Title>
                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                   <div>
-                    <Text strong style={{ display: "block", marginBottom: "8px" }}>Knowledge Base</Text>
+                    <Text strong style={{ display: "block", marginBottom: "8px" }}>Knowledge</Text>
                     <Select
                       value={selectedNode.data.knowledgeBase || 'default'}
                       onChange={(value) => updateNodeData(selectedNode.id, { knowledgeBase: value })}
                       style={{ width: "100%" }}
                       placeholder="Select knowledge base"
                     >
-                      <Select.Option value="default">Default Knowledge Base</Select.Option>
-                      <Select.Option value="project_docs">Project Documentation</Select.Option>
+                      <Select.Option value="default">Default Knowledge</Select.Option>
+                      <Select.Option value="project_docs">Workflow Documentation</Select.Option>
                       <Select.Option value="api_docs">API Documentation</Select.Option>
                       <Select.Option value="custom">Custom Collection</Select.Option>
                     </Select>

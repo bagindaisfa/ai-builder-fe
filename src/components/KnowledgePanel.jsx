@@ -1,190 +1,145 @@
-import React, { useEffect, useState } from "react";
-import { Upload, Button, Table, message, Card, Typography, Space } from "antd";
-import { UploadOutlined, DeleteOutlined, DatabaseOutlined, CloudUploadOutlined } from "@ant-design/icons";
-import { getDatasets, uploadDocument, deleteDocument } from "../api/api";
+import React, { useState, useEffect } from "react";
+import { Button, Typography, Card, Row, Col, message, Flex } from "antd";
+import { PlusOutlined, DatabaseOutlined } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
+import DatasetCard from "./knowledge/DatasetCard";
+import CreateDatasetModal from "./knowledge/CreateDatasetModal";
+import { getDatasets } from "../api/datasetApi";
+import GradientCard from "./common/GradientCard";
 
 const { Title, Text } = Typography;
 
-export default function KnowledgePanel() {
-  const [list, setList] = useState([]);
-
-  const fetch = async () => {
-    try {
-      const res = await getDatasets();
-      setList(res.data || []);
-    } catch (e) {
-      console.error(e);
-      message.error("Gagal ambil dataset");
-    }
-  };
+const KnowledgePanel = () => {
+  const navigate = useNavigate();
+  const [datasets, setDatasets] = useState([]);
+  const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetch();
+    fetchDatasets();
   }, []);
 
-  const uploadProps = {
-    name: "file",
-    customRequest: async ({ file, onSuccess, onError }) => {
-      try {
-        const fd = new FormData();
-        fd.append("file", file);
-        await uploadDocument(fd);
-        onSuccess?.({}, file);
-        message.success("Upload sukses");
-        fetch();
-      } catch (err) {
-        onError?.(err);
-        message.error("Upload gagal");
-      }
-    },
-  };
-
-  const onDelete = async (id) => {
+  const fetchDatasets = async () => {
     try {
-      await deleteDocument(id);
-      message.success("Deleted");
-      fetch();
-    } catch (e) {
-      message.error("Delete gagal");
+      setIsLoading(true);
+      const data = await getDatasets();
+      setDatasets(data);
+    } catch (error) {
+      console.error("Error fetching datasets:", error);
+      message.error("Failed to load datasets");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const columns = [
-    { 
-      title: "ID", 
-      dataIndex: "id", 
-      key: "id",
-      width: 80,
-      render: (id) => (
-        <Text code style={{ fontSize: "12px" }}>
-          #{id}
-        </Text>
-      ),
-    },
-    {
-      title: "Document Name",
-      dataIndex: "name",
-      key: "name",
-      render: (_, row) => (
-        <div>
-          <Text strong style={{ fontSize: "14px" }}>
-            {row.filename || row.name}
-          </Text>
-        </div>
-      ),
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      width: 120,
-      render: (_, row) => (
-        <Button 
-          danger 
-          icon={<DeleteOutlined />}
-          onClick={() => onDelete(row.id)}
-          style={{
-            borderRadius: "8px",
-            fontWeight: "500",
-          }}
-        >
-          Delete
-        </Button>
-      ),
-    },
-  ];
+  const handleCreateDataset = async (newDataset) => {
+    try {
+      setDatasets((prev) => [newDataset, ...prev]);
+      message.success(
+        `Dataset created successfully with ${
+          newDataset.documents?.length || 0
+        } files`
+      );
+      setIsCreateModalVisible(false);
+    } catch (error) {
+      console.error("Error creating dataset:", error);
+      message.error("Failed to create dataset");
+    }
+  };
+
+  const handleDatasetClick = (datasetId) => {
+    navigate(`/datasets/${datasetId}`);
+  };
 
   return (
-    <div style={{ height: "100%" }}>
-      <Card
-        style={{
-          marginBottom: 24,
-          background: "linear-gradient(135deg, #277c90 0%, #66a0b8 100%)",
-          border: "none",
-          borderRadius: "12px",
-        }}
-        bodyStyle={{ padding: "16px 24px" }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <DatabaseOutlined style={{ fontSize: "24px", color: "#fff" }} />
-            <Title level={4} style={{ margin: 0, color: "#fff", fontFamily: "'Montserrat', sans-serif" }}>
-              DATACORE Knowledge Base
-            </Title>
-          </div>
-        </div>
-      </Card>
-
-      <Card
-        style={{
-          marginBottom: 24,
-          borderRadius: "12px",
-          border: "1px solid rgba(0, 0, 0, 0.06)",
-          boxShadow: "0 4px 16px rgba(0, 0, 0, 0.1)",
-        }}
-      >
-        <div style={{ textAlign: "center", padding: "24px" }}>
-          <CloudUploadOutlined 
-            style={{ 
-              fontSize: "48px", 
-              color: "#277c90", 
-              marginBottom: "16px",
-              display: "block"
-            }} 
-          />
-          <Title level={5} style={{ marginBottom: "8px", color: "#333" }}>
-            Upload Documents
-          </Title>
-          <Text type="secondary" style={{ marginBottom: "16px", display: "block" }}>
-            Add documents to your knowledge base for AI training
-          </Text>
-          <Upload {...uploadProps}>
-            <Button 
-              type="primary"
-              icon={<UploadOutlined />}
-              size="large"
-              style={{
-                background: "linear-gradient(135deg, #277c90 0%, #66a0b8 100%)",
-                border: "none",
-                borderRadius: "8px",
-                fontWeight: "500",
-                height: "48px",
-                paddingLeft: "24px",
-                paddingRight: "24px",
-              }}
-            >
-              Choose Files to Upload
-            </Button>
-          </Upload>
-        </div>
-      </Card>
-
-      <Card
-        style={{
-          borderRadius: "12px",
-          border: "1px solid rgba(0, 0, 0, 0.06)",
-          boxShadow: "0 4px 16px rgba(0, 0, 0, 0.1)",
-        }}
-        title={
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <DatabaseOutlined style={{ color: "#277c90" }} />
-            <span>Uploaded Documents</span>
-          </div>
-        }
-      >
-        <Table
-          dataSource={list}
-          columns={columns}
-          rowKey="id"
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: false,
-            showQuickJumper: true,
-          }}
+    <Flex vertical gap="large" style={{ height: "100%" }}>
+      <GradientCard>
+        <div
           style={{
-            borderRadius: "8px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
           }}
-        />
-      </Card>
-    </div>
+        >
+          <Flex align="center" gap="middle">
+            <DatabaseOutlined style={{ fontSize: "24px", color: "#fff" }} />
+            <div>
+              <Title
+                level={4}
+                style={{
+                  margin: 0,
+                  color: "#fff",
+                  fontFamily: "'Montserrat', sans-serif",
+                }}
+              >
+                Knowledge
+              </Title>
+              <Text style={{ color: "rgba(255, 255, 255, 0.8)" }}>
+                Manage your knowledges and documents
+              </Text>
+            </div>
+          </Flex>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setIsCreateModalVisible(true)}
+          >
+            Create Knowledge
+          </Button>
+        </div>
+      </GradientCard>
+
+      <div style={{ marginTop: 24 }}>
+        {isLoading ? (
+          <div style={{ textAlign: "center", padding: "40px 0" }}>
+            <Text type="secondary">Loading datasets...</Text>
+          </div>
+        ) : datasets.length > 0 ? (
+          <Row gutter={[16, 16]}>
+            {datasets.map((dataset) => (
+              <Col xs={24} sm={12} lg={8} xl={6} key={dataset.id}>
+                <DatasetCard
+                  dataset={dataset}
+                  onClick={() => handleDatasetClick(dataset.uuid)}
+                />
+              </Col>
+            ))}
+          </Row>
+        ) : (
+          <Card style={{ textAlign: "center", padding: "40px 0" }}>
+            <DatabaseOutlined
+              style={{ fontSize: 48, color: "#999", marginBottom: 16 }}
+            />
+            <Title level={4} style={{ marginBottom: 8 }}>
+              No datasets yet
+            </Title>
+            <Text
+              type="secondary"
+              style={{ display: "block", marginBottom: 24 }}
+            >
+              Create your first dataset to get started
+            </Text>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setIsCreateModalVisible(true)}
+            >
+              Create Knowledge
+            </Button>
+          </Card>
+        )}
+      </div>
+
+      <CreateDatasetModal
+        visible={isCreateModalVisible}
+        onCancel={() => {
+          setIsCreateModalVisible(false);
+          fetchDatasets();
+        }}
+        onCreate={handleCreateDataset}
+      />
+    </Flex>
   );
-}
+};
+
+export default KnowledgePanel;
