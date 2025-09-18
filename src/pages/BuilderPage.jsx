@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { message, Spin } from "antd";
-import PageContainer from "../components/common/PageContainer";
-import BuilderCanvas from "../components/BuilderCanvas";
-import { getWorkflow } from "../api/api";
+import React, { useEffect, useState, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { message, Spin } from 'antd';
+import PageContainer from '../components/common/PageContainer';
+import BuilderCanvas from '../components/BuilderCanvas';
+import { getWorkflow } from '../api/api';
 
 export default function BuilderPage() {
   const { workflowId } = useParams();
@@ -11,10 +11,23 @@ export default function BuilderPage() {
   const [loading, setLoading] = useState(true);
   const [initialData, setInitialData] = useState(null);
 
+  // inject handler delete
+  const normalizeEdges = useCallback(
+    (edges, handleDelete) =>
+      edges.map((edge) => ({
+        ...edge,
+        type: 'custom',
+        data: {
+          ...edge.data,
+          onDelete: handleDelete,
+        },
+      })),
+    []
+  );
+
   useEffect(() => {
     const loadProject = async () => {
       if (!workflowId) {
-        // If no project ID is provided, redirect to workflow page
         navigate('/studio');
         return;
       }
@@ -22,10 +35,24 @@ export default function BuilderPage() {
       try {
         setLoading(true);
         const response = await getWorkflow(workflowId);
-        // Pass the entire workflow data including nodes and edges
+
+        // definisikan handler delete disini (akan diteruskan via data.onDelete)
+        const handleDeleteEdge = (edgeId) => {
+          setInitialData((prev) => ({
+            ...prev,
+            edges: prev.edges.filter((e) => e.id !== edgeId),
+          }));
+        };
+
+        // normalisasi edges sebelum masuk ke canvas
+        const normalizedEdges = normalizeEdges(
+          response.data.edges || [],
+          handleDeleteEdge
+        );
+
         setInitialData({
           nodes: response.data.nodes || [],
-          edges: response.data.edges || []
+          edges: normalizedEdges,
         });
       } catch (error) {
         console.error('Error loading project:', error);
@@ -37,12 +64,19 @@ export default function BuilderPage() {
     };
 
     loadProject();
-  }, [workflowId, navigate]);
+  }, [workflowId, navigate, normalizeEdges]);
 
   if (loading) {
     return (
       <PageContainer>
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '80vh',
+          }}
+        >
           <Spin size="large" />
         </div>
       </PageContainer>

@@ -14,7 +14,7 @@ export default function DocumentActions({
         <Button
           type="text"
           icon={<EyeOutlined />}
-          onClick={() => onView(document.id)}
+          onClick={() => onView(document)}
           size="small"
         />
       </Tooltip>
@@ -31,7 +31,7 @@ export default function DocumentActions({
       <Popconfirm
         title="Delete document"
         description="Are you sure you want to delete this document?"
-        onConfirm={() => onDelete(document.id)}
+        onConfirm={() => onDelete(document.uuid)}
         okText="Yes"
         cancelText="No"
         okButtonProps={{ danger: true }}

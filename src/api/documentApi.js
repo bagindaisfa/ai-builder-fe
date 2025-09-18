@@ -16,7 +16,7 @@ export const uploadDocument = async (formData) => {
 
 export const processDocuments = async (datasetId, chunkSettings) => {
   try {
-    const response = await api.post(
+    const response = await API.post(
       `/datasets/${datasetId}/process`,
       chunkSettings
     );
@@ -29,7 +29,7 @@ export const processDocuments = async (datasetId, chunkSettings) => {
 
 export const getDocuments = async (datasetId) => {
   try {
-    const response = await api.get(`/datasets/${datasetId}/documents`);
+    const response = await API.get(`/datasets/${datasetId}/documents`);
     return response.data;
   } catch (error) {
     console.error("Error fetching documents:", error);
@@ -39,7 +39,7 @@ export const getDocuments = async (datasetId) => {
 
 export const deleteDocument = async (documentId) => {
   try {
-    await api.delete(`/documents/${documentId}`);
+    await API.delete(`/knowledge/documents/${documentId}`);
   } catch (error) {
     console.error("Error deleting document:", error);
     throw error;

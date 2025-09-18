@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   Button,
@@ -15,16 +15,16 @@ import {
   Checkbox,
   Row,
   Col,
-} from "antd";
+} from 'antd';
 import {
   InboxOutlined,
   UploadOutlined,
   FileOutlined,
   SettingOutlined,
   CheckCircleOutlined,
-} from "@ant-design/icons";
-import { createDataset } from "../../api/datasetApi";
-import { uploadDocument } from "../../api/documentApi";
+} from '@ant-design/icons';
+import { createDataset } from '../../api/datasetApi';
+import { uploadDocument } from '../../api/documentApi';
 
 const { Dragger } = Upload;
 const { Step } = Steps;
@@ -61,20 +61,20 @@ const CreateDatasetModal = ({ visible, onCancel, onCreate }) => {
       // Check file size (10MB limit)
       const isLt10M = file.size / 1024 / 1024 < 10;
       if (!isLt10M) {
-        messageApi.error("File must be smaller than 10MB!");
+        messageApi.error('File must be smaller than 10MB!');
         return Upload.LIST_IGNORE;
       }
 
       // Check file type
       const isSupported = [
-        "application/pdf",
-        "text/plain",
-        "text/markdown",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "application/msword",
-        "application/vnd.ms-excel",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "text/csv",
+        'application/pdf',
+        'text/plain',
+        'text/markdown',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/msword',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/csv',
       ].includes(file.type);
 
       if (!isSupported) {
@@ -98,10 +98,10 @@ const CreateDatasetModal = ({ visible, onCancel, onCreate }) => {
     try {
       if (currentStep === 0) {
         // Validate step 1 fields
-        await form.validateFields(["name", "description"]);
+        await form.validateFields(['name', 'description']);
 
         if (fileList.length === 0) {
-          messageApi.warning("Please select at least one file");
+          messageApi.warning('Please select at least one file');
           return;
         } else {
           await handleUpload();
@@ -111,11 +111,11 @@ const CreateDatasetModal = ({ visible, onCancel, onCreate }) => {
         const allValues = form.getFieldsValue(true);
         // Validate step 2 fields
         await form.validateFields([
-          "max_chunk_len",
-          "chunk_overlap",
-          "delimiter",
-          "replaceWhitespace",
-          "removeUrlsAndEmails",
+          'max_chunk_len',
+          'chunk_overlap',
+          'delimiter',
+          'replaceWhitespace',
+          'removeUrlsAndEmails',
         ]);
 
         // Update dataset info with all current values
@@ -127,8 +127,8 @@ const CreateDatasetModal = ({ visible, onCancel, onCreate }) => {
 
       setCurrentStep(currentStep + 1);
     } catch (error) {
-      console.error("Form validation failed:", error);
-      messageApi.error(error.message || "Please fill in all required fields");
+      console.error('Form validation failed:', error);
+      messageApi.error(error.message || 'Please fill in all required fields');
     }
   };
 
@@ -144,17 +144,17 @@ const CreateDatasetModal = ({ visible, onCancel, onCreate }) => {
       if (fileList && fileList.length > 0) {
         const formData = new FormData();
         fileList.forEach((file) => {
-          formData.append("files", file);
+          formData.append('files', file);
         });
 
         const response = await uploadDocument(formData);
-        messageApi.success("Documents uploaded, now creating dataset...");
+        messageApi.success('Documents uploaded, now creating dataset...');
         setUploadedDocs(response.data);
       }
     } catch (error) {
-      console.error("Error in form submission:", error);
+      console.error('Error in form submission:', error);
       messageApi.error(
-        "Failed to process the form. Please check your inputs and try again."
+        'Failed to process the form. Please check your inputs and try again.'
       );
     } finally {
       setUploading(false);
@@ -174,7 +174,7 @@ const CreateDatasetModal = ({ visible, onCancel, onCreate }) => {
       };
 
       if (!allValues.name || !allValues.description) {
-        throw new Error("Missing required fields");
+        throw new Error('Missing required fields');
       }
       // Prepare the dataset data with the correct structure
       const datasetData = {
@@ -182,17 +182,17 @@ const CreateDatasetModal = ({ visible, onCancel, onCreate }) => {
         description: allValues.description,
         processing_config: {
           chunk_setting: {
-            delimiter: allValues.delimiter || "\n\n",
-            max_chunk_len: allValues.max_chunk_len || 1000,
-            chunk_overlap: allValues.chunk_overlap || 200,
+            delimiter: allValues.delimiter || '\n\n',
+            max_chunk_len: allValues.max_chunk_len || 1024,
+            chunk_overlap: allValues.chunk_overlap || 50,
             text_pre_pocessing_rule: [
               allValues.replaceWhitespace &&
-                "replace consecutive spaces new lines and tabs",
+                'replace consecutive spaces new lines and tabs',
               allValues.removeUrlsAndEmails &&
-                "delete all urls and email address",
+                'delete all urls and email address',
             ].filter(Boolean), // Remove any falsy values from the array
           },
-          index_method: "economical",
+          index_method: 'economical',
         },
         documents: Array.isArray(documents) ? documents : [],
       };
@@ -200,11 +200,11 @@ const CreateDatasetModal = ({ visible, onCancel, onCreate }) => {
       // Call the API to create the dataset
       await createDataset(datasetData);
 
-      messageApi.success("Dataset created successfully!");
+      messageApi.success('Dataset created successfully!');
       onCancel();
     } catch (error) {
-      console.error("Error creating dataset:", error);
-      messageApi.error("Failed to create dataset. Please try again.");
+      console.error('Error creating dataset:', error);
+      messageApi.error('Failed to create dataset. Please try again.');
     } finally {
       setIsCreatingDataset(false);
     }
@@ -221,7 +221,7 @@ const CreateDatasetModal = ({ visible, onCancel, onCreate }) => {
               rules={[
                 {
                   required: true,
-                  message: "Please enter a name for your dataset",
+                  message: 'Please enter a name for your dataset',
                 },
               ]}
             >
@@ -235,10 +235,10 @@ const CreateDatasetModal = ({ visible, onCancel, onCreate }) => {
               />
             </Form.Item>
 
-            <div style={{ margin: "24px 0" }}>
+            <div style={{ margin: '24px 0' }}>
               <Dragger {...uploadProps}>
                 <p className="ant-upload-drag-icon">
-                  <InboxOutlined style={{ color: "#1890ff" }} />
+                  <InboxOutlined style={{ color: '#1890ff' }} />
                 </p>
                 <p className="ant-upload-text">
                   Click or drag files to this area to upload
@@ -258,8 +258,8 @@ const CreateDatasetModal = ({ visible, onCancel, onCreate }) => {
                     renderItem={(file) => (
                       <List.Item>
                         <FileOutlined style={{ marginRight: 8 }} />
-                        <Text ellipsis style={{ maxWidth: "80%" }}>
-                          {file.name} ({(file.size / 1024 / 1024).toFixed(2)}{" "}
+                        <Text ellipsis style={{ maxWidth: '80%' }}>
+                          {file.name} ({(file.size / 1024 / 1024).toFixed(2)}{' '}
                           MB)
                         </Text>
                       </List.Item>
@@ -289,7 +289,7 @@ const CreateDatasetModal = ({ visible, onCancel, onCreate }) => {
                     rules={[
                       {
                         required: true,
-                        message: "Please enter maximum chunk length",
+                        message: 'Please enter maximum chunk length',
                       },
                     ]}
                   >
@@ -302,7 +302,7 @@ const CreateDatasetModal = ({ visible, onCancel, onCreate }) => {
                     label="Chunk Overlap (characters)"
                     tooltip="Number of characters that adjacent chunks will overlap"
                     rules={[
-                      { required: true, message: "Please enter chunk overlap" },
+                      { required: true, message: 'Please enter chunk overlap' },
                     ]}
                   >
                     <Input type="number" min={0} max={5000} />
@@ -332,7 +332,7 @@ const CreateDatasetModal = ({ visible, onCancel, onCreate }) => {
                 title="Text Pre-processing Rules"
                 size="small"
                 style={{ marginBottom: 16, marginTop: 16 }}
-                bodyStyle={{ padding: "12px 16px" }}
+                bodyStyle={{ padding: '12px 16px' }}
               >
                 <Form.Item name="replaceWhitespace" valuePropName="checked">
                   <Checkbox>
@@ -358,9 +358,9 @@ const CreateDatasetModal = ({ visible, onCancel, onCreate }) => {
                 renderItem={(file) => (
                   <List.Item>
                     <FileOutlined
-                      style={{ marginRight: 8, color: "#52c41a" }}
+                      style={{ marginRight: 8, color: '#52c41a' }}
                     />
-                    <Text ellipsis style={{ maxWidth: "80%" }}>
+                    <Text ellipsis style={{ maxWidth: '80%' }}>
                       {file.name}
                     </Text>
                   </List.Item>
@@ -372,16 +372,16 @@ const CreateDatasetModal = ({ visible, onCancel, onCreate }) => {
 
       case 2:
         return (
-          <div style={{ textAlign: "center", padding: "40px 0" }}>
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
             <CheckCircleOutlined
-              style={{ fontSize: 48, color: "#52c41a", marginBottom: 24 }}
+              style={{ fontSize: 48, color: '#52c41a', marginBottom: 24 }}
             />
             <h3>Ready to Create Knowledge</h3>
             <Text type="secondary">
               Your dataset will be created with the following settings:
             </Text>
             <div
-              style={{ textAlign: "left", margin: "16px 0", padding: "0 40px" }}
+              style={{ textAlign: 'left', margin: '16px 0', padding: '0 40px' }}
             >
               <p>
                 <Text strong>Name:</Text> {datasetInfo.name}
@@ -390,12 +390,15 @@ const CreateDatasetModal = ({ visible, onCancel, onCreate }) => {
                 <Text strong>Files:</Text> {fileList.length} files selected
               </p>
               <p>
-                <Text strong>Chunk Size:</Text>{" "}
-                {form.getFieldValue("chunkSize") || 1000} characters
+                <Text strong>Chunk Size:</Text>{' '}
+                {form.getFieldValue('max_chunk_len')} characters
               </p>
               <p>
-                <Text strong>Chunk Overlap:</Text>{" "}
-                {form.getFieldValue("chunkOverlap") || 200} characters
+                <Text strong>Chunk Overlap:</Text>{' '}
+                {form.getFieldValue('chunk_overlap')} characters
+              </p>
+              <p>
+                <Text strong>Delimiter:</Text> {form.getFieldValue('delimiter')}
               </p>
             </div>
           </div>
@@ -408,15 +411,15 @@ const CreateDatasetModal = ({ visible, onCancel, onCreate }) => {
 
   const steps = [
     {
-      title: "Basic Info",
+      title: 'Basic Info',
       icon: <FileOutlined />,
     },
     {
-      title: "Chunk Settings",
+      title: 'Chunk Settings',
       icon: <SettingOutlined />,
     },
     {
-      title: "Review",
+      title: 'Review',
       icon: <CheckCircleOutlined />,
     },
   ];
@@ -426,13 +429,13 @@ const CreateDatasetModal = ({ visible, onCancel, onCreate }) => {
       <div>
         <h3 style={{ margin: 0 }}>
           {currentStep === 0
-            ? "Create Knowledge"
+            ? 'Create Knowledge'
             : currentStep === 1
-            ? "Configure Chunking"
-            : "Review & Create"}
+            ? 'Configure Chunking'
+            : 'Review & Create'}
         </h3>
         <div style={{ marginTop: 8 }}>
-          <Steps current={currentStep} size="small" style={{ width: "100%" }}>
+          <Steps current={currentStep} size="small" style={{ width: '100%' }}>
             {steps.map((step, index) => (
               <Step
                 key={index}
@@ -473,7 +476,7 @@ const CreateDatasetModal = ({ visible, onCancel, onCreate }) => {
           onClick={() => handleCreateDataset(uploadedDocs)}
           loading={isCreatingDataset}
         >
-          {isCreatingDataset ? "Creating..." : "Create Knowledge"}
+          {isCreatingDataset ? 'Creating...' : 'Create Knowledge'}
         </Button>
       ),
     ],
@@ -500,11 +503,11 @@ const CreateDatasetModal = ({ visible, onCancel, onCreate }) => {
           form={form}
           layout="vertical"
           initialValues={{
-            name: "",
-            description: "",
-            max_chunk_len: 1000,
-            chunk_overlap: 200,
-            delimiter: "\n\n",
+            name: '',
+            description: '',
+            max_chunk_len: 1024,
+            chunk_overlap: 50,
+            delimiter: '\n\n',
             replaceWhitespace: true,
             removeUrlsAndEmails: true,
           }}

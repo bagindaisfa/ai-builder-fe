@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   Button,
@@ -16,20 +16,36 @@ import {
   Radio,
   Popover,
   Flex,
-} from "antd";
-import { PlusOutlined, UploadOutlined, CodeOutlined, FolderOutlined, ArrowRightOutlined, PictureOutlined, SmileOutlined, BuildOutlined,UserOutlined } from "@ant-design/icons";
+  Pagination,
+} from 'antd';
+import {
+  PlusOutlined,
+  UploadOutlined,
+  CodeOutlined,
+  FolderOutlined,
+  ArrowRightOutlined,
+  PictureOutlined,
+  SmileOutlined,
+  BuildOutlined,
+  UserOutlined,
+  SearchOutlined,
+} from '@ant-design/icons';
 import EmojiPicker from 'emoji-picker-react';
 
 const defaultEmoji = '📁';
-import { useNavigate } from "react-router-dom";
-import { createWorkflow, getWorkflows, createOrUpdateWorkflow } from "../api/api";
-import GradientCard from "../components/common/GradientCard";
+import { useNavigate } from 'react-router-dom';
+import {
+  createWorkflow,
+  getWorkflows,
+  createOrUpdateWorkflow,
+} from '../api/api';
+import GradientCard from '../components/common/GradientCard';
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
 
 const CreateWorkflowModal = ({ visible, onCancel, onCreate }) => {
-  const [activeTab, setActiveTab] = useState("blank");
+  const [activeTab, setActiveTab] = useState('blank');
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [fileList, setFileList] = useState([]);
@@ -48,12 +64,12 @@ const CreateWorkflowModal = ({ visible, onCancel, onCreate }) => {
         name: values.name,
         description: values.description || '',
         nodes: [],
-        edges: []
+        edges: [],
       };
 
-      if (activeTab === "import") {
+      if (activeTab === 'import') {
         if (fileList.length === 0) {
-          message.error("Please upload a DSL file");
+          message.error('Please upload a DSL file');
           return;
         }
         const file = fileList[0].originFileObj;
@@ -64,7 +80,7 @@ const CreateWorkflowModal = ({ visible, onCancel, onCreate }) => {
           payload.nodes = dslData.nodes || [];
           payload.edges = dslData.edges || [];
         } catch (e) {
-          message.error("Invalid DSL file format");
+          message.error('Invalid DSL file format');
           return;
         }
       }
@@ -76,8 +92,8 @@ const CreateWorkflowModal = ({ visible, onCancel, onCreate }) => {
       // Navigate to the New Workflow
       navigate(`/builder/${newWorkflow.data.uuid}`);
     } catch (error) {
-      console.error("Error creating workflow:", error);
-      message.error("Failed to create workflow");
+      console.error('Error creating workflow:', error);
+      message.error('Failed to create workflow');
     } finally {
       setLoading(false);
     }
@@ -88,8 +104,8 @@ const CreateWorkflowModal = ({ visible, onCancel, onCreate }) => {
       setFileList([]);
     },
     beforeUpload: (file) => {
-      if (file.type !== "application/json") {
-        message.error("You can only upload JSON files!");
+      if (file.type !== 'application/json') {
+        message.error('You can only upload JSON files!');
         return Upload.LIST_IGNORE;
       }
       setFileList([file]);
@@ -120,42 +136,70 @@ const CreateWorkflowModal = ({ visible, onCancel, onCreate }) => {
             <Form.Item
               name="name"
               label="Workflow Name"
-              rules={[{ required: true, message: "Please enter Workflow Name" }]}
+              rules={[
+                { required: true, message: 'Please enter Workflow Name' },
+              ]}
             >
               <Input placeholder="My Awesome Workflow" />
             </Form.Item>
             <Form.Item name="description" label="Description">
-              <Input.TextArea rows={3} placeholder="Describe your workflow..." />
+              <Input.TextArea
+                rows={3}
+                placeholder="Describe your workflow..."
+              />
             </Form.Item>
             <Form.Item name="iconType" label="Icon Type" initialValue="emoji">
               <Radio.Group>
-                <Radio.Button value="emoji"><SmileOutlined /> Emoji</Radio.Button>
-                <Radio.Button value="image"><PictureOutlined /> Upload Image</Radio.Button>
+                <Radio.Button value="emoji">
+                  <SmileOutlined /> Emoji
+                </Radio.Button>
+                <Radio.Button value="image">
+                  <PictureOutlined /> Upload Image
+                </Radio.Button>
               </Radio.Group>
             </Form.Item>
-            <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => prevValues.iconType !== currentValues.iconType}>
-              {({ getFieldValue }) => (
+            <Form.Item
+              noStyle
+              shouldUpdate={(prevValues, currentValues) =>
+                prevValues.iconType !== currentValues.iconType
+              }
+            >
+              {({ getFieldValue }) =>
                 getFieldValue('iconType') === 'emoji' ? (
-                  <Form.Item name="icon" label="Select Emoji" initialValue={defaultEmoji}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                      <div style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '8px',
-                        backgroundColor: '#f0f7ff',
+                  <Form.Item
+                    name="icon"
+                    label="Select Emoji"
+                    initialValue={defaultEmoji}
+                  >
+                    <div
+                      style={{
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '24px',
-                        cursor: 'pointer'
-                      }}>
+                        gap: '16px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '8px',
+                          backgroundColor: '#f0f7ff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '24px',
+                          cursor: 'pointer',
+                        }}
+                      >
                         {form.getFieldValue('icon') || defaultEmoji}
                       </div>
-                      <Popover 
+                      <Popover
                         trigger="click"
                         content={
-                          <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                            <EmojiPicker 
+                          <div
+                            style={{ maxHeight: '300px', overflowY: 'auto' }}
+                          >
+                            <EmojiPicker
                               onEmojiClick={(emojiData) => {
                                 form.setFieldValue('icon', emojiData.emoji);
                               }}
@@ -166,17 +210,24 @@ const CreateWorkflowModal = ({ visible, onCancel, onCreate }) => {
                           </div>
                         }
                       >
-                        <Button type="default" icon={<SmileOutlined />}>Choose Emoji</Button>
+                        <Button type="default" icon={<SmileOutlined />}>
+                          Choose Emoji
+                        </Button>
                       </Popover>
                     </div>
                   </Form.Item>
                 ) : (
-                  <Form.Item 
-                    name="iconFile" 
+                  <Form.Item
+                    name="iconFile"
                     label="Upload Icon"
                     valuePropName="fileList"
                     getValueFromEvent={(e) => e && e.fileList}
-                    rules={[{ required: true, message: 'Please upload an icon image' }]}
+                    rules={[
+                      {
+                        required: true,
+                        message: 'Please upload an icon image',
+                      },
+                    ]}
                   >
                     <Upload
                       listType="picture-card"
@@ -208,7 +259,7 @@ const CreateWorkflowModal = ({ visible, onCancel, onCreate }) => {
                     </Upload>
                   </Form.Item>
                 )
-              )}
+              }
             </Form.Item>
           </Form>
         </TabPane>
@@ -226,7 +277,7 @@ const CreateWorkflowModal = ({ visible, onCancel, onCreate }) => {
                 name="name"
                 label="Workflow Name"
                 rules={[
-                  { required: true, message: "Please enter Workflow Name" },
+                  { required: true, message: 'Please enter Workflow Name' },
                 ]}
               >
                 <Input placeholder="My Imported Workflow" />
@@ -254,76 +305,81 @@ const CreateWorkflowModal = ({ visible, onCancel, onCreate }) => {
 
 const WorkflowCard = ({ workflow, onSelect }) => {
   const isEmoji = workflow.icon && !workflow.icon.startsWith('data:image');
-  
+
   const renderIcon = () => {
     if (isEmoji) {
       return (
-        <div style={{
-          width: '40px',
-          height: '40px',
-          borderRadius: '8px',
-          backgroundColor: '#f0f7ff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '24px',
-          flexShrink: 0
-        }}>
+        <div
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '8px',
+            backgroundColor: '#f0f7ff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '24px',
+            flexShrink: 0,
+          }}
+        >
           {workflow.icon || '📁'}
         </div>
       );
     } else if (workflow.icon) {
       return (
-        <div style={{
-          width: '40px',
-          height: '40px',
-          borderRadius: '8px',
-          overflow: 'hidden',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#f0f7ff',
-          flexShrink: 0
-        }}>
-          <img 
-            src={workflow.icon} 
-            alt="Workflow icon" 
+        <div
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#f0f7ff',
+            flexShrink: 0,
+          }}
+        >
+          <img
+            src={workflow.icon}
+            alt="Workflow icon"
             style={{
               width: '100%',
               height: '100%',
-              objectFit: 'cover'
+              objectFit: 'cover',
             }}
           />
         </div>
       );
     }
-    
+
     // Default icon if none is set
     return (
-      <div style={{
-        width: '40px',
-        height: '40px',
-        borderRadius: '8px',
-        backgroundColor: '#f0f7ff',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '20px',
-        flexShrink: 0
-      }}>
+      <div
+        style={{
+          width: '40px',
+          height: '40px',
+          borderRadius: '8px',
+          backgroundColor: '#f0f7ff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '20px',
+          flexShrink: 0,
+        }}
+      >
         📁
       </div>
     );
   };
-  
+
   return (
     <Card
-      hoverable
-      style={{ 
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
         background: 'linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%)',
         border: '1px solid #e6e8f0',
         borderRadius: '12px',
@@ -333,130 +389,158 @@ const WorkflowCard = ({ workflow, onSelect }) => {
         position: 'relative',
         '&:hover': {
           transform: 'translateY(-4px)',
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.08)'
-        }
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.08)',
+        },
       }}
       bodyStyle={{
         flex: 1,
-        display: "flex",
-        flexDirection: "column",
+        display: 'flex',
+        flexDirection: 'column',
         padding: '20px',
         backgroundColor: 'transparent',
         position: 'relative',
-        zIndex: 1
+        zIndex: 1,
       }}
       onClick={() => onSelect(workflow)}
     >
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        right: 0,
-        width: '100%',
-        height: '4px',
-        background: 'linear-gradient(90deg, #277c90, #66a0b8)'
-      }} />
       <div
         style={{
-          display: "flex",
-          flexDirection: "column",
-          height: "100%"
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          width: '100%',
+          height: '4px',
+          background: 'linear-gradient(90deg, #277c90, #66a0b8)',
+        }}
+      />
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
         }}
       >
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '16px', 
-          marginBottom: '16px',
-          paddingTop: '8px'
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            marginBottom: '16px',
+            paddingTop: '8px',
+          }}
+        >
           {renderIcon()}
-          <Title level={5} style={{ 
-            margin: 0, 
-            color: '#1a1a1a',
-            fontWeight: 600,
-            fontSize: '16px',
-            whiteSpace: 'nowrap', 
-            overflow: 'hidden', 
-            textOverflow: 'ellipsis' 
-          }}>
+          <Title
+            level={5}
+            style={{
+              margin: 0,
+              color: '#1a1a1a',
+              fontWeight: 600,
+              fontSize: '16px',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
             {workflow.name}
           </Title>
         </div>
-        
-        <div style={{ 
-          flex: 1,
-          marginBottom: '16px',
-          minHeight: '40px',
-          overflow: 'hidden',
-          color: '#4b5563',
-          fontSize: '14px',
-          lineHeight: '1.5'
-        }}>
-          <div style={{ 
-            marginBottom: '8px',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
+
+        <div
+          style={{
+            flex: 1,
+            marginBottom: '16px',
+            minHeight: '40px',
             overflow: 'hidden',
-            textOverflow: 'ellipsis'
-          }}>
+            color: '#4b5563',
+            fontSize: '14px',
+            lineHeight: '1.5',
+          }}
+        >
+          <div
+            style={{
+              marginBottom: '8px',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
             <Text type="secondary" style={{ fontSize: '13px', margin: 0 }}>
-              {workflow.description || "No description provided"}
+              {workflow.description || 'No description provided'}
             </Text>
           </div>
-          <div style={{ 
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            fontSize: '12px',
-            color: '#6b7280',
-            marginTop: '8px',
-            paddingTop: '8px',
-            borderTop: '1px dashed #f0f0f0'
-          }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '12px',
+              color: '#6b7280',
+              marginTop: '8px',
+              paddingTop: '8px',
+              borderTop: '1px dashed #f0f0f0',
+            }}
+          >
             <UserOutlined style={{ fontSize: '11px' }} />
-            <span>Created by {workflow.created_by || "Unknown"}</span>
+            <span>Created by {workflow.created_by || 'Unknown'}</span>
           </div>
         </div>
-        
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          marginTop: 'auto',
-          paddingTop: '12px',
-          borderTop: '1px solid #f0f0f0'
-        }}>
-          <Tag color="blue" style={{ margin: 0 }}>{workflow.type || "Workflow"}</Tag>
-          <div style={{ 
-            display: 'flex', 
+
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
             alignItems: 'center',
-            gap: '8px'
-          }}>
-            <Text style={{ 
-              fontSize: '12px', 
-              color: '#6b7280',
-              fontWeight: 500
-            }}>
+            marginTop: 'auto',
+            paddingTop: '12px',
+            borderTop: '1px solid #f0f0f0',
+          }}
+        >
+          <Tag color="blue" style={{ margin: 0 }}>
+            {workflow.type || 'Workflow'}
+          </Tag>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            <Text
+              style={{
+                fontSize: '12px',
+                color: '#6b7280',
+                fontWeight: 500,
+              }}
+            >
               {new Date(workflow.updated_at).toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'short',
-                day: 'numeric'
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
               })}
             </Text>
-            <Button 
-              type="text" 
-              icon={<ArrowRightOutlined style={{ 
-                color: '#6b7280',
-                fontSize: '14px'
-              }} />} 
+            <Button
+              type="text"
+              icon={
+                <ArrowRightOutlined
+                  style={{
+                    color: '#6b7280',
+                    fontSize: '14px',
+                  }}
+                />
+              }
               style={{
                 width: '24px',
                 height: '24px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginLeft: 'auto'
+                marginLeft: 'auto',
               }}
             />
           </div>
@@ -470,20 +554,50 @@ const StudioPanel = () => {
   const [workflows, setWorkflows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 12,
+    total: 0,
+  });
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchWorkflows();
-  }, []);
+  }, [pagination.current, pagination.pageSize, searchKeyword]);
+
+  const handleSearch = (value) => {
+    setSearchKeyword(value);
+    setPagination((prev) => ({ ...prev, current: 1 })); // Reset to first page on new search
+  };
+
+  const handleTableChange = (pagination, filters, sorter) => {
+    setPagination((prev) => ({
+      ...prev,
+      current: pagination.current,
+      pageSize: pagination.pageSize,
+    }));
+  };
 
   const fetchWorkflows = async () => {
     try {
       setLoading(true);
-      const response = await getWorkflows();
-      setWorkflows(response.data || []);
+      const params = {
+        page: pagination.current,
+        per_page: pagination.pageSize,
+        keyword: searchKeyword,
+      };
+
+      const response = await getWorkflows(params);
+      setWorkflows(response.data?.items || []);
+      setPagination((prev) => ({
+        ...prev,
+        total: response.data?.total || 0,
+      }));
     } catch (error) {
-      console.error("Error fetching workflows:", error);
-      message.error("Failed to load workflows");
+      console.error('Error fetching workflows:', error);
+      message.error('Failed to load workflows');
     } finally {
       setLoading(false);
     }
@@ -493,20 +607,20 @@ const StudioPanel = () => {
     try {
       const newWorkflow = await createWorkflow({
         name: values.name,
-        description: values.description || "",
-        type: "workflow",
+        description: values.description || '',
+        type: 'workflow',
         // Add DSL content if importing
         ...(values.dslContent && { dslContent: values.dslContent }),
         // Let backend create default nodes and edges
       });
 
-      message.success("Workflow created successfully!");
+      message.success('Workflow created successfully!');
       fetchWorkflows();
       // Navigate to the New Workflow
       navigate(`/builder/${newWorkflow.data.uuid}`);
     } catch (error) {
-      console.error("Error creating workflow:", error);
-      message.error("Failed to create workflow");
+      console.error('Error creating workflow:', error);
+      message.error('Failed to create workflow');
     }
   };
 
@@ -515,62 +629,134 @@ const StudioPanel = () => {
   };
 
   return (
-    <Flex vertical gap="large" style={{ height: "100%" }}>
+    <Flex vertical gap="large" style={{ height: '100%' }}>
       <GradientCard>
         <div
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
           }}
         >
           <Flex align="center" gap="middle">
-            <BuildOutlined style={{ fontSize: "24px", color: "#fff" }} />
+            <BuildOutlined style={{ fontSize: '24px', color: '#fff' }} />
             <div>
-              <Title level={3} style={{ margin: 0, color: "#fff", fontFamily: "'Montserrat', sans-serif" }}>
+              <Title
+                level={3}
+                style={{
+                  margin: 0,
+                  color: '#fff',
+                  fontFamily: "'Montserrat', sans-serif",
+                }}
+              >
                 Studio
               </Title>
-              <Text style={{ color: "rgba(255, 255, 255, 0.8)" }}>
+              <Text style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
                 Create and manage your studio workflows
               </Text>
             </div>
           </Flex>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => setModalVisible(true)}
-          >
-            New Workflow
-          </Button>
         </div>
       </GradientCard>
 
-      <div style={{ marginTop: 24 }}>
+      <div style={{ marginTop: 16 }}>
+        <div
+          style={{
+            marginBottom: 10,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <div style={{ flex: 1, maxWidth: 400 }}>
+            <Input
+              placeholder="Search workflows..."
+              prefix={<SearchOutlined />}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onPressEnter={() => handleSearch(searchInput)}
+              allowClear
+              onClear={() => {
+                setSearchInput('');
+                handleSearch('');
+              }}
+            />
+          </div>
+          <div>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setModalVisible(true)}
+            >
+              New Workflow
+            </Button>
+          </div>
+        </div>
+
         {loading ? (
           <Card loading={loading} />
         ) : Array.isArray(workflows) && workflows.length > 0 ? (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-            gap: '16px',
-            padding: '8px'
-          }}>
-            {workflows.map((workflow) => (
-              <WorkflowCard 
-                key={workflow.uuid} 
-                workflow={workflow} 
-                onSelect={handleWorkflowSelect} 
+          <>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                gap: '16px',
+                marginBottom: 24,
+              }}
+            >
+              {workflows.map((workflow) => (
+                <WorkflowCard
+                  key={workflow.uuid}
+                  workflow={workflow}
+                  onSelect={handleWorkflowSelect}
+                />
+              ))}
+            </div>
+            <div
+              style={{
+                marginTop: 16,
+                display: 'flex',
+                justifyContent: 'center',
+              }}
+            >
+              <Pagination
+                current={pagination.current}
+                pageSize={pagination.pageSize}
+                total={pagination.total}
+                onChange={(page, pageSize) => {
+                  setPagination((prev) => ({
+                    ...prev,
+                    current: page,
+                    pageSize,
+                  }));
+                }}
+                showSizeChanger
+                showTotal={(total, range) =>
+                  `${range[0]}-${range[1]} of ${total} workflows`
+                }
+                style={{ marginTop: 16 }}
               />
-            ))}
-          </div>
+            </div>
+          </>
         ) : (
           <Card>
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
               description={
-                <span>
-                  No workflows found. Create your first workflow to get started.
-                </span>
+                <div>
+                  <p>
+                    No workflows found{' '}
+                    {searchKeyword ? 'matching your search' : ''}.
+                  </p>
+                  <Button
+                    type="primary"
+                    onClick={() => setModalVisible(true)}
+                    style={{ marginTop: 16 }}
+                  >
+                    Create Your First Workflow
+                  </Button>
+                </div>
               }
             />
           </Card>

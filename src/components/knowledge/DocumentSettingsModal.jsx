@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 import {
   Modal,
   Form,
@@ -8,8 +8,8 @@ import {
   Button,
   message,
   Card,
-} from "antd";
-import { SettingOutlined } from "@ant-design/icons";
+} from 'antd';
+import { SettingOutlined } from '@ant-design/icons';
 
 const { Option } = Select;
 
@@ -26,11 +26,11 @@ const DocumentSettingsModal = ({ visible, onCancel, onSave, documentData }) => {
         description: documentData.description,
         ...values,
       });
-      message.success("Document settings saved successfully");
+      message.success('Document settings saved successfully');
       onCancel();
     } catch (error) {
-      console.error("Error saving document settings:", error);
-      message.error("Failed to save document settings");
+      console.error('Error saving document settings:', error);
+      message.error('Failed to save document settings');
     } finally {
       setLoading(false);
     }
@@ -74,11 +74,11 @@ const DocumentSettingsModal = ({ visible, onCancel, onSave, documentData }) => {
           delimiter: documentData.processing_config?.chunk_setting?.delimiter,
           replaceWhitespace:
             documentData.processing_config?.chunk_setting?.text_pre_pocessing_rule.includes(
-              "replace consecutive spaces new lines and tabs"
+              'replace consecutive spaces new lines and tabs'
             ),
           removeUrlsAndEmails:
             documentData.processing_config?.chunk_setting?.text_pre_pocessing_rule.includes(
-              "delete all urls and email address"
+              'delete all urls and email address'
             ),
         }}
       >
@@ -87,7 +87,7 @@ const DocumentSettingsModal = ({ visible, onCancel, onSave, documentData }) => {
           label="Maximum Chunk Length (characters)"
           tooltip="The maximum size of each text chunk in characters"
           rules={[
-            { required: true, message: "Please enter maximum chunk length" },
+            { required: true, message: 'Please enter maximum chunk length' },
           ]}
         >
           <Input type="number" min={100} max={10000} />
@@ -97,7 +97,7 @@ const DocumentSettingsModal = ({ visible, onCancel, onSave, documentData }) => {
           name="chunk_overlap"
           label="Chunk Overlap (characters)"
           tooltip="Number of characters that adjacent chunks will overlap"
-          rules={[{ required: true, message: "Please enter chunk overlap" }]}
+          rules={[{ required: true, message: 'Please enter chunk overlap' }]}
         >
           <Input type="number" min={0} max={5000} />
         </Form.Item>
@@ -122,7 +122,7 @@ const DocumentSettingsModal = ({ visible, onCancel, onSave, documentData }) => {
           title="Text Pre-processing Rules"
           size="small"
           style={{ marginBottom: 16, marginTop: 16 }}
-          bodyStyle={{ padding: "12px 16px" }}
+          bodyStyle={{ padding: '12px 16px' }}
         >
           <Form.Item name="replaceWhitespace" valuePropName="checked">
             <Checkbox>

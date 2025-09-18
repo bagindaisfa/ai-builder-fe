@@ -1,16 +1,16 @@
-import React, { useState } from "react";
-import { Table, Input, Select, Space, Typography, Button, Modal } from "antd";
+import React, { useState } from 'react';
+import { Table, Input, Select, Space, Typography, Button, Modal } from 'antd';
 import {
   SearchOutlined,
   FilterOutlined,
   SettingOutlined,
-} from "@ant-design/icons";
-import DocumentStatusBadge from "./DocumentStatusBadge";
-import DocumentActions from "./DocumentActions";
+} from '@ant-design/icons';
+import DocumentStatusBadge from './DocumentStatusBadge';
+import DocumentActions from './DocumentActions';
 import {
   formatFileSize,
   formatUploadDate,
-} from "../../data/knowledgeBaseMockData";
+} from '../../data/knowledgeBaseMockData';
 
 export default function DocumentTable({
   documents,
@@ -20,7 +20,7 @@ export default function DocumentTable({
   enableBulkOperations = true,
   pagination = true,
 }) {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
@@ -34,7 +34,7 @@ export default function DocumentTable({
   };
 
   const clearFilters = () => {
-    setSearchQuery("");
+    setSearchQuery('');
     setStatusFilter(null);
   };
 
@@ -52,7 +52,7 @@ export default function DocumentTable({
   });
 
   const handleBulkDelete = () => {
-    selectedRowKeys.forEach((id) => onDocumentDelete(id));
+    selectedRowKeys.forEach((uuid) => onDocumentDelete(uuid));
     setSelectedRowKeys([]);
   };
 
@@ -61,54 +61,54 @@ export default function DocumentTable({
         selectedRowKeys,
         onChange: setSelectedRowKeys,
         getCheckboxProps: (record) => ({
-          disabled: record.status === "processing",
+          disabled: record.status === 'processing',
         }),
       }
     : null;
 
   const columns = [
     {
-      title: "Name",
-      dataIndex: "filename",
-      key: "filename",
+      title: 'Name',
+      dataIndex: 'filename',
+      key: 'filename',
       width: 400,
       render: (text) => <span style={{ fontWeight: 500 }}>{text}</span>,
       sorter: (a, b) => a.filename.localeCompare(b.filename),
     },
     {
-      title: "Status",
-      dataIndex: "embedding_status",
-      key: "embedding_status",
+      title: 'Status',
+      dataIndex: 'embedding_status',
+      key: 'embedding_status',
       width: 150,
       render: (embedding_status) => (
         <DocumentStatusBadge status={embedding_status} />
       ),
       filters: [
-        { text: "Completed", value: "completed" },
-        { text: "Pending", value: "pending" },
-        { text: "Error", value: "error" },
+        { text: 'Completed', value: 'completed' },
+        { text: 'Pending', value: 'pending' },
+        { text: 'Error', value: 'error' },
       ],
       onFilter: (value, record) => record.embedding_status === value,
     },
     {
-      title: "Uploaded",
-      dataIndex: "updated_at",
-      key: "updated_at",
+      title: 'Uploaded',
+      dataIndex: 'updated_at',
+      key: 'updated_at',
       width: 150,
       render: (date) => formatUploadDate(date),
       sorter: (a, b) => new Date(a.updated_at) - new Date(b.updated_at),
     },
     {
-      title: "Size",
-      dataIndex: "fileSize",
-      key: "size",
+      title: 'Size',
+      dataIndex: 'size',
+      key: 'size',
       width: 120,
       render: (size) => formatFileSize(size),
-      sorter: (a, b) => a.fileSize - b.fileSize,
+      sorter: (a, b) => a.size - b.size,
     },
     {
-      title: "Actions",
-      key: "actions",
+      title: 'Actions',
+      key: 'actions',
       width: 180,
       render: (_, record) => (
         <Space size="middle">
@@ -124,7 +124,7 @@ export default function DocumentTable({
   ];
 
   return (
-    <Space direction="vertical" size="large" style={{ width: "100%" }}>
+    <Space direction="vertical" size="large" style={{ width: '100%' }}>
       {/* Search and Filter Controls */}
       <Space size="middle">
         <Input
@@ -166,7 +166,7 @@ export default function DocumentTable({
       <Table
         columns={columns}
         dataSource={filteredDocuments}
-        rowKey="id"
+        rowKey="uuid"
         rowSelection={rowSelection}
         pagination={
           pagination
@@ -178,7 +178,7 @@ export default function DocumentTable({
               }
             : false
         }
-        style={{ width: "100%" }}
+        style={{ width: '100%' }}
         size="middle"
       />
     </Space>

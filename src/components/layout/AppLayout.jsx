@@ -12,6 +12,7 @@ import PreviewPage from "../../pages/PreviewPage";
 import ApiAccessPage from "../../pages/ApiAccessPage";
 import ProfilePage from "../../pages/ProfilePage";
 import DatasetDetailPage from "../../pages/DatasetDetailPage";
+import DocumentChunksPage from "../../pages/DocumentChunksPage";
 
 const { Content } = Layout;
 
@@ -50,6 +51,7 @@ function AppContent() {
                 <Route path="/builder/:workflowId" element={<BuilderPage />} />
                 <Route path="/knowledge" element={<KnowledgePage />} />
                 <Route path="/datasets/:datasetId" element={<DatasetDetailPage />} />
+                <Route path="/document/details/:documentId" element={<DocumentChunksPage />} />
                 <Route path="/preview" element={<PreviewPage />} />
                 <Route path="/api" element={<ApiAccessPage />} />
                 <Route path="/profile" element={<ProfilePage />} />

@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect } from 'react';
 import {
   Layout,
   Typography,
@@ -10,17 +10,17 @@ import {
   Menu,
   Button,
   message,
-} from "antd";
-import { useLocation, useNavigate } from "react-router-dom";
+} from 'antd';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from '../../contexts/AuthContext';
 import {
   BulbOutlined,
   UserOutlined,
   LogoutOutlined,
   SettingOutlined,
   DownOutlined,
-} from "@ant-design/icons";
+} from '@ant-design/icons';
 
 const { Header } = Layout;
 const { Title, Text } = Typography;
@@ -39,61 +39,56 @@ export default function AppHeader() {
       await logout();
       // The AuthContext will handle navigation and page reload
     } catch (error) {
-      console.error("Logout error:", error);
+      console.error('Logout error:', error);
       messageApi.error(error.message || 'Failed to log out');
       setIsLoggingOut(false);
     }
   }, [logout, messageApi]);
 
-  const userMenu = (
-    <Menu
-      items={[
-        {
-          key: 'profile',
-          label: 'Profile',
-          icon: <UserOutlined />,
-          onClick: () => navigate('/profile'),
-        },
-        {
-          type: 'divider',
-        },
-        {
-          key: 'logout',
-          label: 'Logout',
-          icon: <LogoutOutlined />,
-          onClick: handleLogout,
-        },
-      ]}
-    />
-  );
+  const userMenuItems = [
+    {
+      key: 'profile',
+      label: 'Profile',
+      icon: <UserOutlined />,
+      onClick: () => navigate('/profile'),
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'logout',
+      label: 'Logout',
+      icon: <LogoutOutlined />,
+      onClick: handleLogout,
+    },
+  ];
 
   const getPageTitle = () => {
-    return "DataCore AI Forge";
+    return 'DataCore AI Forge';
   };
-
 
   return (
     <>
       {contextHolder}
       <Header
         style={{
-          height: "100px",
-          background: isDarkMode ? "#1f1f1f" : "#ffffff",
+          height: '100px',
+          background: isDarkMode ? '#1f1f1f' : '#ffffff',
           paddingLeft: 24,
           paddingRight: 24,
-          borderBottom: `1px solid ${isDarkMode ? "#333" : "#e5e7eb"}`,
-          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+          borderBottom: `1px solid ${isDarkMode ? '#333' : '#e5e7eb'}`,
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
         }}
       >
-        <Flex justify="space-between" align="center" style={{ height: "100%" }}>
+        <Flex justify="space-between" align="center" style={{ height: '100%' }}>
           <Title
             level={3}
             style={{
               margin: 0,
-              fontSize: "24px",
-              fontWeight: "600",
+              fontSize: '24px',
+              fontWeight: '600',
               fontFamily: "'Montserrat', sans-serif",
-              color: isDarkMode ? "#fff" : "#1f2937",
+              color: isDarkMode ? '#fff' : '#1f2937',
             }}
           >
             {getPageTitle()}
@@ -101,8 +96,8 @@ export default function AppHeader() {
           <Space align="center" size="middle">
             <BulbOutlined
               style={{
-                fontSize: "18px",
-                color: isDarkMode ? "#fff" : "#1f2937",
+                fontSize: '18px',
+                color: isDarkMode ? '#fff' : '#1f2937',
                 marginRight: 8,
               }}
             />
@@ -113,22 +108,47 @@ export default function AppHeader() {
               unCheckedChildren="☀️"
               style={{ marginRight: 16 }}
             />
-            
+
             {user ? (
-              <Dropdown overlay={userMenu} trigger={['click']} placement="bottomRight">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '4px 8px', borderRadius: 4, ':hover': { backgroundColor: isDarkMode ? '#333' : '#f5f5f5' } }}>
-                  <Avatar 
-                    size="default" 
-                    icon={<UserOutlined />} 
-                    style={{ backgroundColor: isDarkMode ? '#1890ff' : '#1890ff' }}
+              <Dropdown
+                menu={{ items: userMenuItems }}
+                trigger={['click']}
+                placement="bottomRight"
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    cursor: 'pointer',
+                    padding: '4px 8px',
+                    borderRadius: 4,
+                    ':hover': {
+                      backgroundColor: isDarkMode ? '#333' : '#f5f5f5',
+                    },
+                  }}
+                >
+                  <Avatar
+                    size="default"
+                    icon={<UserOutlined />}
+                    style={{
+                      backgroundColor: isDarkMode ? '#1890ff' : '#1890ff',
+                    }}
                   />
-                  <Text style={{ color: isDarkMode ? '#fff' : '#1f2937' }}>{user.name || 'User'}</Text>
-                  <DownOutlined style={{ color: isDarkMode ? '#fff' : '#1f2937', fontSize: 12 }} />
+                  <Text style={{ color: isDarkMode ? '#fff' : '#1f2937' }}>
+                    {user.username || 'User'}
+                  </Text>
+                  <DownOutlined
+                    style={{
+                      color: isDarkMode ? '#fff' : '#1f2937',
+                      fontSize: 12,
+                    }}
+                  />
                 </div>
               </Dropdown>
             ) : (
-              <Button 
-                type="primary" 
+              <Button
+                type="primary"
                 onClick={() => navigate('/login')}
                 loading={isLoggingOut}
               >

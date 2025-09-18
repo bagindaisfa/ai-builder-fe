@@ -1,0 +1,79 @@
+/* Variable Selector Styles */
+.variable-selector-popover .ant-popover-inner-content {
+  padding: 0 !important;
+}
+
+.variable-item {
+  transition: background-color 0.2s;
+}
+
+.variable-item:hover {
+  background-color: #f5f5f5;
+}
+
+.variable-item:active {
+  background-color: #e6f7ff;
+}
+
+/* Style for variable placeholders in inputs */
+.variable-tag {
+  display: inline-block;
+  background: #e6f7ff;
+  border: 1px solid #91d5ff;
+  border-radius: 4px;
+  padding: 0 6px;
+  margin: 2px 4px 2px 0;
+  font-size: 12px;
+  line-height: 20px;
+  color: #1890ff;
+  white-space: nowrap;
+}
+
+/* For the input that shows the variable insertion */
+.variable-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.variable-trigger {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #1890ff;
+  cursor: pointer;
+  z-index: 1;
+}
+
+/* For the popover content */
+.variable-popover-content {
+  width: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.variable-node-header {
+  padding: 8px 12px;
+  background: #f9f9f9;
+  border-bottom: 1px solid #f0f0f0;
+  font-weight: 500;
+}
+
+.variable-item-content {
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.variable-item-content:hover {
+  background-color: #f5f5f5;
+}
+
+.variable-type-tag {
+  margin-left: 8px;
+  font-size: 12px;
+  background: #f0f0f0;
+  padding: 0 4px;
+  border-radius: 2px;
+  color: #666;
+}

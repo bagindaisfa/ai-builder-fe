@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import axios from "axios";
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
 import {
   Flex,
   Card,
@@ -15,17 +15,17 @@ import {
   Col,
   Checkbox,
   message,
-} from "antd";
+} from 'antd';
 import {
   LoadingOutlined,
   UserOutlined,
   LockOutlined,
   EyeInvisibleOutlined,
   EyeTwoTone,
-} from "@ant-design/icons";
-import { useTheme } from "../contexts/ThemeContext";
-import { useAuth } from "../contexts/AuthContext";
-import dataCoreLogo from "../assets/datacore-logo.png";
+} from '@ant-design/icons';
+import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
+import dataCoreLogo from '../assets/datacore-logo.png';
 
 const { Text, Title } = Typography;
 
@@ -42,7 +42,7 @@ const LoginPage = () => {
 
   useEffect(() => {
     // Check for remember me
-    const savedUsername = localStorage.getItem("rememberedUsername");
+    const savedUsername = localStorage.getItem('rememberedUsername');
     if (savedUsername) {
       form.setFieldsValue({ username: savedUsername });
       setRememberMe(true);
@@ -57,11 +57,11 @@ const LoginPage = () => {
   }, [location.state, form]);
 
   const handleForgotPassword = async () => {
-    const email = form.getFieldValue("email") || "";
+    const email = form.getFieldValue('email') || '';
 
     if (!email) {
-      setError("Please enter your email address to reset your password.");
-      form.setFields([{ name: "email", errors: ["Email is required"] }]);
+      setError('Please enter your email address to reset your password.');
+      form.setFields([{ name: 'email', errors: ['Email is required'] }]);
       return;
     }
 
@@ -77,26 +77,26 @@ const LoginPage = () => {
 
       // Show success message to the user
       message.success(
-        "Password reset instructions have been sent to your email."
+        'Password reset instructions have been sent to your email.'
       );
     } catch (err) {
-      console.error("Forgot password error:", err);
+      console.error('Forgot password error:', err);
 
-      let errorMessage = "Failed to process your request. Please try again.";
+      let errorMessage = 'Failed to process your request. Please try again.';
 
       if (err.response) {
         const { status, data } = err.response;
 
         if (status === 404) {
-          errorMessage = "No account found with this email address.";
+          errorMessage = 'No account found with this email address.';
         } else if (status === 400 && data?.message) {
           errorMessage = data.message;
         } else if (status >= 500) {
-          errorMessage = "Server error. Please try again later.";
+          errorMessage = 'Server error. Please try again later.';
         }
       } else if (err.request) {
         errorMessage =
-          "Unable to connect to the server. Please check your internet connection.";
+          'Unable to connect to the server. Please check your internet connection.';
       }
 
       setError(errorMessage);
@@ -112,22 +112,22 @@ const LoginPage = () => {
     try {
       // Clear any previous errors
       form.setFields([
-        { name: "username", errors: [] },
-        { name: "password", errors: [] },
+        { name: 'username', errors: [] },
+        { name: 'password', errors: [] },
       ]);
 
       // Call the login function from AuthContext with username
       await login(values.username, values.password);
 
       // If login is successful, redirect to the intended page or home
-      const returnTo = location.state?.from?.pathname || "/";
-      message.loading({ content: "Signing in...", key: "login", duration: 1 });
+      const returnTo = location.state?.from?.pathname || '/';
+      message.loading({ content: 'Signing in...', key: 'login', duration: 1 });
       navigate(returnTo, { replace: true });
     } catch (err) {
-      console.error("Login error:", err);
+      console.error('Login error:', err);
 
       let errorMessage =
-        err.message || "An error occurred during login. Please try again.";
+        err.message || 'An error occurred during login. Please try again.';
 
       // Handle different types of errors
       if (err.response) {
@@ -135,19 +135,19 @@ const LoginPage = () => {
 
         if (status === 401) {
           errorMessage =
-            data?.message || "Invalid email or password. Please try again.";
+            data?.message || 'Invalid email or password. Please try again.';
           form.setFields([
-            { name: "email", errors: [""] },
-            { name: "password", errors: [errorMessage] },
+            { name: 'email', errors: [''] },
+            { name: 'password', errors: [errorMessage] },
           ]);
         } else if (status === 400) {
           // Handle validation errors from the server
           if (data?.errors) {
             const fieldErrors = {};
             data.errors.forEach((error) => {
-              const field = error.path?.[0] || "email";
+              const field = error.path?.[0] || 'email';
               if (!fieldErrors[field]) fieldErrors[field] = [];
-              fieldErrors[field].push(error.msg || "Invalid input");
+              fieldErrors[field].push(error.msg || 'Invalid input');
             });
 
             form.setFields(
@@ -157,18 +157,18 @@ const LoginPage = () => {
               }))
             );
 
-            errorMessage = "Please correct the errors in the form.";
+            errorMessage = 'Please correct the errors in the form.';
           } else if (data?.message) {
             errorMessage = data.message;
           }
         } else if (status >= 500) {
-          errorMessage = "Server error. Please try again later.";
+          errorMessage = 'Server error. Please try again later.';
         }
       } else if (err.request) {
         // The request was made but no response was received
-        console.error("No response from server:", err.request);
+        console.error('No response from server:', err.request);
         errorMessage =
-          "Unable to connect to the server. Please check your internet connection.";
+          'Unable to connect to the server. Please check your internet connection.';
       } else if (err.message) {
         // Something happened in setting up the request
         errorMessage = err.message;
@@ -184,16 +184,16 @@ const LoginPage = () => {
   const handleSignup = () => {
     try {
       // Store the current path to return after signup if needed
-      const returnTo = location.state?.from?.pathname || "/";
-      if (returnTo && returnTo !== "/signup") {
-        localStorage.setItem("returnTo", returnTo);
+      const returnTo = location.state?.from?.pathname || '/';
+      if (returnTo && returnTo !== '/signup') {
+        localStorage.setItem('returnTo', returnTo);
       }
 
       // Navigate to the signup page
-      navigate("/signup");
+      navigate('/signup');
     } catch (err) {
-      console.error("Signup navigation error:", err);
-      setError("Failed to redirect to signup. Please try again.");
+      console.error('Signup navigation error:', err);
+      setError('Failed to redirect to signup. Please try again.');
     }
   };
 
@@ -206,61 +206,61 @@ const LoginPage = () => {
   const styles = {
     card: {
       minWidth: 450,
-      boxShadow: "0 4px 20px rgba(0, 0, 0, 0.08)",
+      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
       borderRadius: 12,
       marginBottom: 16,
     },
     divider: {
-      margin: "16px 0",
-      borderTop: `1px solid ${isDarkMode ? "#2f2f2f" : "#f0f0f0"}`,
+      margin: '16px 0',
+      borderTop: `1px solid ${isDarkMode ? '#2f2f2f' : '#f0f0f0'}`,
     },
     dividerText: {
-      fontSize: "12px",
-      padding: "0 16px",
-      backgroundColor: isDarkMode ? "#141414" : "#fff",
+      fontSize: '12px',
+      padding: '0 16px',
+      backgroundColor: isDarkMode ? '#141414' : '#fff',
     },
     formItem: {
       marginBottom: 16,
     },
     form: {
-      width: "100%",
+      width: '100%',
     },
     rememberMeContainer: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
       marginBottom: 16,
     },
     signupContainer: {
       marginTop: 24,
-      textAlign: "center",
-      width: "100%",
+      textAlign: 'center',
+      width: '100%',
     },
     button: {
-      width: "100%",
+      width: '100%',
       height: 44,
       fontWeight: 500,
       fontSize: 15,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
       gap: 8,
     },
     logo: {
-      height: "48px",
-      marginBottom: "8px",
+      height: '48px',
+      marginBottom: '8px',
     },
     container: {
-      minHeight: "100vh",
-      padding: "24px",
-      background: isDarkMode ? "#141414" : "#f0f2f5",
+      minHeight: '100vh',
+      padding: '24px',
+      background: isDarkMode ? '#141414' : '#f0f2f5',
     },
   };
 
   if (authLoading) {
     return (
       <Flex
-        style={{ width: "100%", height: "100vh" }}
+        style={{ width: '100%', height: '100vh' }}
         justify="center"
         align="center"
       >
@@ -273,27 +273,27 @@ const LoginPage = () => {
     <Flex align="center" justify="center" style={styles.container}>
       <Card
         style={styles.card}
-        bodyStyle={{ padding: "32px" }}
+        bodyStyle={{ padding: '32px' }}
         bordered={false}
       >
         <Flex vertical align="center" gap={24}>
           <img src={dataCoreLogo} alt="DataCore Logo" style={styles.logo} />
 
-          <Title level={3} style={{ margin: 0, textAlign: "center" }}>
+          <Title level={3} style={{ margin: 0, textAlign: 'center' }}>
             Welcome back
           </Title>
 
-          <Text type="secondary" style={{ textAlign: "center" }}>
+          <Text type="secondary" style={{ textAlign: 'center' }}>
             Sign in to your account to continue
           </Text>
 
           {error && (
-            <div style={{ width: "100%", marginBottom: 16 }}>
+            <div style={{ width: '100%', marginBottom: 16 }}>
               <Alert
                 message={error}
                 type="error"
                 showIcon
-                style={{ width: "100%" }}
+                style={{ width: '100%' }}
                 closable
                 onClose={() => setError(null)}
               />
@@ -310,7 +310,7 @@ const LoginPage = () => {
             <Form.Item
               name="username"
               rules={[
-                { required: true, message: "Please enter your username" },
+                { required: true, message: 'Please enter your username' },
               ]}
               style={styles.formItem}
             >
@@ -325,13 +325,13 @@ const LoginPage = () => {
             <Form.Item
               name="password"
               rules={[
-                { required: true, message: "Please enter your password" },
-                { min: 8, message: "Password must be at least 8 characters" },
+                { required: true, message: 'Please enter your password' },
+                { min: 8, message: 'Password must be at least 8 characters' },
               ]}
               style={styles.formItem}
             >
               <Input
-                type={passwordVisible ? "text" : "password"}
+                type={passwordVisible ? 'text' : 'password'}
                 size="large"
                 placeholder="Password"
                 prefix={<LockOutlined />}
@@ -339,7 +339,7 @@ const LoginPage = () => {
                 suffix={
                   <span
                     onClick={togglePasswordVisibility}
-                    style={{ cursor: "pointer" }}
+                    style={{ cursor: 'pointer' }}
                   >
                     {passwordVisible ? (
                       <EyeTwoTone />
@@ -371,7 +371,7 @@ const LoginPage = () => {
                 style={styles.button}
                 block
               >
-                {isSubmitting ? "Signing in..." : "Sign in"}
+                {isSubmitting ? 'Signing in...' : 'Sign in'}
               </Button>
             </Form.Item>
           </Form>

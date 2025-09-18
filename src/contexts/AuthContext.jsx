@@ -4,14 +4,14 @@ import React, {
   useState,
   useEffect,
   useCallback,
-} from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import axios from "axios";
+} from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
 import {
   login as loginApi,
   logout as logoutApi,
   refreshToken as refreshTokenApi,
-} from "../api/api";
+} from '../api/api';
 
 // Create the auth context
 const AuthContext = createContext();
@@ -26,6 +26,7 @@ const AuthProviderInternal = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [needLogout, setNeedLogout] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -34,9 +35,9 @@ const AuthProviderInternal = ({ children }) => {
   const setAuthTokens = (accessToken, refreshToken) => {
     if (accessToken) {
       // Save tokens to localStorage
-      localStorage.setItem("access_token", accessToken);
+      localStorage.setItem('access_token', accessToken);
       if (refreshToken) {
-        localStorage.setItem("refresh_token", refreshToken);
+        localStorage.setItem('refresh_token', refreshToken);
       }
 
       // Only set the access token in axios headers for API requests
@@ -44,9 +45,9 @@ const AuthProviderInternal = ({ children }) => {
       // axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
     } else {
       // Clear tokens
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
-      delete axios.defaults.headers.common["Authorization"];
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      delete axios.defaults.headers.common['Authorization'];
     }
   };
 
@@ -54,9 +55,9 @@ const AuthProviderInternal = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const accessToken = localStorage.getItem("access_token");
-        const refreshToken = localStorage.getItem("refresh_token");
-        const savedUser = localStorage.getItem("user");
+        const accessToken = localStorage.getItem('access_token');
+        const refreshToken = localStorage.getItem('refresh_token');
+        const savedUser = localStorage.getItem('user');
 
         if (accessToken && refreshToken && savedUser) {
           // Store tokens (without setting auth header yet)
@@ -67,9 +68,9 @@ const AuthProviderInternal = ({ children }) => {
           // When we implement API auth, we'll need to validate/refresh the token here
         }
       } catch (err) {
-        console.error("Auth check failed:", err);
+        console.error('Auth check failed:', err);
         setAuthTokens(null, null);
-        localStorage.removeItem("user");
+        localStorage.removeItem('user');
       } finally {
         setLoading(false);
         setIsInitialized(true);
@@ -91,19 +92,19 @@ const AuthProviderInternal = ({ children }) => {
 
         // Store tokens and user data
         setAuthTokens(access_token, refresh_token);
-        localStorage.setItem("user", JSON.stringify(user));
+        localStorage.setItem('user', JSON.stringify(user));
         setUser(user);
 
         // Redirect to the intended URL or home
-        const from = location.state?.from?.pathname || "/";
-        navigate(from, { replace: true });
+        const from = location.state?.from?.pathname || '/';
+        window.location.href = from || '/';
 
         return user;
       } catch (err) {
-        console.error("Login failed:", err);
+        console.error('Login failed:', err);
         const errorMessage =
           err.response?.data?.message ||
-          "Failed to login. Please check your credentials.";
+          'Failed to login. Please check your credentials.';
         setError(errorMessage);
         throw new Error(errorMessage);
       } finally {
@@ -117,7 +118,7 @@ const AuthProviderInternal = ({ children }) => {
   const logout = useCallback(async () => {
     try {
       // Get refresh token for logout
-      const refreshToken = localStorage.getItem("refresh_token");
+      const refreshToken = localStorage.getItem('refresh_token');
       if (refreshToken) {
         // Send the refresh token in the Authorization header
         const config = {
@@ -128,13 +129,13 @@ const AuthProviderInternal = ({ children }) => {
         await logoutApi(null, config);
       }
     } catch (err) {
-      console.error("Logout error:", err);
+      console.error('Logout error:', err);
     } finally {
       // Clear all auth data
       setAuthTokens(null, null);
-      localStorage.removeItem("user");
+      localStorage.removeItem('user');
       setUser(null);
-      navigate("/login");
+      navigate('/login');
     }
   }, [navigate]);
 
@@ -152,7 +153,7 @@ const AuthProviderInternal = ({ children }) => {
         !userData.first_name ||
         !userData.last_name
       ) {
-        throw new Error("All fields are required");
+        throw new Error('All fields are required');
       }
 
       // Use the API function instead of direct axios call
@@ -164,10 +165,10 @@ const AuthProviderInternal = ({ children }) => {
         last_name: userData.last_name,
       });
     } catch (err) {
-      console.error("Signup error:", err);
+      console.error('Signup error:', err);
       const errorMessage =
         err.response?.data?.message ||
-        "Failed to create account. Please try again.";
+        'Failed to create account. Please try again.';
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -176,41 +177,58 @@ const AuthProviderInternal = ({ children }) => {
   }, []);
 
   // Update profile function
-  const updateProfile = async (profileData) => {
+  const updateProfile = async (user_id, profileData) => {
     setLoading(true);
     setError(null);
 
+    const shouldLogout = !!(profileData.old_password && profileData.password);
+
     try {
-      const token = localStorage.getItem("auth_token");
+      const token = localStorage.getItem('access_token');
       if (!token) {
-        throw new Error("No authentication token found");
+        throw new Error('No authentication token found');
       }
 
       const response = await axios.put(
-        `${import.meta.env.VITE_API_URL}/auth/me`,
+        `${import.meta.env.VITE_API_BASE_URL}/auth/user/${user_id}`,
         profileData,
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
         }
       );
 
-      const { user: updatedUser } = response.data;
+      const user = response.data;
 
       // Update local storage with new user data
-      localStorage.setItem("user", JSON.stringify(updatedUser));
+      localStorage.setItem('user', JSON.stringify(user));
 
-      // Update state
-      setUser(updatedUser);
+      // Update state with the returned user data or merge with existing
+      const updatedUserData = response.data || {};
+      setUser((prevUser) => ({
+        ...prevUser,
+        ...updatedUserData,
+        // Preserve the existing token if not in response
+        token: updatedUserData.token || prevUser.token,
+      }));
 
-      return updatedUser;
+      if (shouldLogout) {
+        // Don't await logout to prevent blocking the UI
+        logout();
+        return { ...updatedUserData, shouldLogout: true };
+      }
+
+      return updatedUserData;
     } catch (err) {
-      console.error("Update profile error:", err);
+      console.error('Update profile error:', err);
       const errorMessage =
         err.response?.data?.message ||
-        "Failed to update profile. Please try again.";
+        'Failed to update profile. Please try again.';
+      if (err.response?.status === 401) {
+        logout();
+      }
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -225,7 +243,7 @@ const AuthProviderInternal = ({ children }) => {
 
     try {
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/auth/forgot-password`,
+        `${import.meta.env.VITE_API_BASE_URL}/auth/forgot-password`,
         { email }
       );
       return response.data;
@@ -239,7 +257,7 @@ const AuthProviderInternal = ({ children }) => {
 
   // Helper function to handle auth errors
   const handleAuthError = useCallback((err) => {
-    let errorMessage = "An error occurred. Please try again.";
+    let errorMessage = 'An error occurred. Please try again.';
 
     if (err.response) {
       const { status, data } = err.response;
@@ -247,15 +265,15 @@ const AuthProviderInternal = ({ children }) => {
       if (status === 400 && data?.message) {
         errorMessage = data.message;
       } else if (status === 401) {
-        errorMessage = "Invalid credentials. Please try again.";
+        errorMessage = 'Invalid credentials. Please try again.';
       } else if (status === 409) {
-        errorMessage = "An account with this email already exists.";
+        errorMessage = 'An account with this email already exists.';
       } else if (status >= 500) {
-        errorMessage = "Server error. Please try again later.";
+        errorMessage = 'Server error. Please try again later.';
       }
     } else if (err.request) {
       errorMessage =
-        "Unable to connect to the server. Please check your internet connection.";
+        'Unable to connect to the server. Please check your internet connection.';
     } else if (err.message) {
       errorMessage = err.message;
     }
@@ -266,10 +284,10 @@ const AuthProviderInternal = ({ children }) => {
 
   // Get authentication headers
   const getAuthHeaders = useCallback(() => {
-    const token = localStorage.getItem("auth_token");
+    const token = localStorage.getItem('access_token');
     return {
       Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     };
   }, []);
 
@@ -288,6 +306,7 @@ const AuthProviderInternal = ({ children }) => {
     signup,
     forgotPassword,
     getAuthHeaders,
+    updateProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -297,7 +316,7 @@ const AuthProviderInternal = ({ children }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };

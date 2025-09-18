@@ -2,7 +2,7 @@ import API from "./api";
 
 export const getDatasets = async () => {
   try {
-    const response = await API.get("/knowledge/knowledge-bases");
+    const response = await API.get("/knowledge/knowledges");
     return response.data;
   } catch (error) {
     console.error("Error fetching datasets:", error);
@@ -12,7 +12,7 @@ export const getDatasets = async () => {
 
 export const getDataset = async (datasetId) => {
   try {
-    const response = await API.get(`/knowledge/knowledge-bases/${datasetId}`);
+    const response = await API.get(`/knowledge/knowledge/${datasetId}`);
     return response.data;
   } catch (error) {
     console.error("Error fetching dataset:", error);
@@ -50,6 +50,21 @@ export const deleteDataset = async (datasetId) => {
   }
 };
 
+export const datasetTestRetrieve = async (datasetId, query, top_k, retrievalMethod = 'keyword') => {
+  try {
+    const response = await API.post(`/knowledge/retrieval-test/${datasetId}`, {
+      query: query,
+      limit: top_k,
+      retrieval_method: retrievalMethod
+    });
+  
+    return response;
+  } catch (error) {
+    console.error("Error testing dataset:", error);
+    throw error;
+  }
+};
+
 export const addFileToDataset = async (datasetId, files) => {
   try {
     const formData = new FormData();
@@ -70,6 +85,54 @@ export const addFileToDataset = async (datasetId, files) => {
     return response.data;
   } catch (error) {
     console.error("Error adding files to dataset:", error);
+    throw error;
+  }
+};
+
+export const getDocumentChunks = async (documentId) => {
+  try {
+    const response = await API.get(`/knowledge/documents/${documentId}/chunks`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching document chunks:", error);
+    throw error;
+  }
+};
+
+export const getDocumentDetails = async (documentId, keyword, page, limit) => {
+  try {
+    const response = await API.get(`/document/details/${documentId}?keyword=${keyword}&page=${page}&per_page=${limit}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching document chunks:", error);
+    throw error;
+  }
+};
+
+
+export const getDocumentChunksPaginated = async (documentId, keyword, page, limit) => {
+  try {
+    const response = await API.get(`/knowledge/document/chunks/${documentId}?keyword=${keyword}&page=${page}&per_page=${limit}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching document chunks:", error);
+    throw error;
+  }
+};
+
+
+export const getRetrievalHistory = async (datasetId, page, perPage, keyword) => {
+  try {
+    const response = await API.get(`/knowledge/retrieval/history/${datasetId}`, {
+      params: {
+        page,
+        per_page: perPage,
+        keyword: keyword || undefined
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching retrieval history:", error);
     throw error;
   }
 };
