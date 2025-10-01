@@ -84,14 +84,9 @@ const HttpRequestNode = ({ selectedNode, workflowId, updateNodeData }) => {
                                     workflowUuid={workflowId}
                                     currentNodeId={selectedNode.id}
                                     onSelect={(variable) => {
-                                    const currentValue =
-                                        selectedNode.data.settings?.systemPrompt || '';
-                                    updateNodeData(selectedNode.id, {
-                                        settings: {
-                                        ...selectedNode.data.settings,
-                                        systemPrompt: currentValue + variable,
-                                        },
-                                    });
+                                        updateNodeData(selectedNode.id, {
+                                            url: selectedNode.data.url + variable,
+                                        });
                                     }}
                                 >
                                     <Button
@@ -107,7 +102,7 @@ const HttpRequestNode = ({ selectedNode, workflowId, updateNodeData }) => {
                             <Input
                                 value={selectedNode.data.url || ''}
                                 onChange={(e) =>
-                                updateNodeData(selectedNode.id, {
+                                updateNodeData(selectedNode.id, {   
                                     url: e.target.value,
                                 })
                                 }
@@ -394,6 +389,7 @@ const HttpRequestNode = ({ selectedNode, workflowId, updateNodeData }) => {
                                                     style={{ width: '100%' }}
                                                 >
                                                     <Select.Option value="text">Text</Select.Option>
+                                                    <Select.Option value="file">File</Select.Option>
                                                 </Select>
                                             ),
                                         },
@@ -402,28 +398,59 @@ const HttpRequestNode = ({ selectedNode, workflowId, updateNodeData }) => {
                                             dataIndex: 'value',
                                             width: '40%',
                                             render: (_, record, index) => (
-                                                // record.type === 'file' ? (
-                                                //     <Input
-                                                //         type="file"
-                                                //         onChange={(e) => {
-                                                //             const newData = [...selectedNode.data.bodyData];
-                                                //             newData[index].value = e.target.files[0];
-                                                //             updateNodeData(selectedNode.id, { bodyData: newData });
-                                                //         }}
-                                                //         size="small"
-                                                //     />
-                                                // ) : (
-                                                    <Input
-                                                        value={record.value}
-                                                        onChange={(e) => {
-                                                            const newData = [...selectedNode.data.bodyData];
-                                                            newData[index].value = e.target.value;
-                                                            updateNodeData(selectedNode.id, { bodyData: newData });
-                                                        }}
-                                                        placeholder="Value"
-                                                        size="small"
-                                                    />
-                                                // )
+                                                record.type === 'file' ? (
+                                                    
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <Input
+                                                            value={record.value}
+                                                            onChange={(e) => {
+                                                                const newData = [...selectedNode.data.bodyData];
+                                                                newData[index].value = e.target.value;
+                                                                updateNodeData(selectedNode.id, { bodyData: newData });
+                                                            }}
+                                                            onClick={() => {
+                                                                setIsDropdownOpen(true);
+                                                            }}
+                                                            placeholder="Select Variable"
+                                                            size="small"
+                                                            style={{ flex: 1 }}
+                                                            readOnly
+                                                        />
+                                                        <VariableSelector
+                                                            workflowUuid={workflowId}
+                                                            currentNodeId={selectedNode.id}
+                                                            onSelect={(variable) => {
+                                                                const currentValue = record.value || '';
+                                                                const newData = [...selectedNode.data.bodyData];
+                                                                newData[index].value = currentValue + variable;
+                                                                updateNodeData(selectedNode.id, { bodyData: newData });
+                                                            }}
+                                                        >
+                                                            <Button 
+                                                                size="small"
+                                                                icon={<CodeOutlined />}
+                                                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                            >
+                                                                Var
+                                                            </Button>
+                                                        </VariableSelector>
+
+                                                     </div>
+
+                                                ) : (
+                                                    
+                                                <Input
+                                                    value={record.value}
+                                                    onChange={(e) => {
+                                                        const newData = [...selectedNode.data.bodyData];
+                                                        newData[index].value = e.target.value;
+                                                        updateNodeData(selectedNode.id, { bodyData: newData });
+                                                    }}
+                                                    placeholder="Value"
+                                                    size="small"
+                                                />
+                                                )
+                                                
                                             ),
                                         },
                                         {

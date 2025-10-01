@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Typography, Divider, Input, Button, Checkbox, Slider } from 'antd';
 import { CodeOutlined } from '@ant-design/icons';
 import VariableSelector from '../VariableSelector';
+import ConversationHistoryConfig from '../ConversationHistoryConfig';
 
 const { Title, Text } = Typography;
 
@@ -305,9 +306,9 @@ const AgentNode = ({ workflowId, selectedNode, updateNodeData }) => {
             Num Ctx: {selectedNode.data.settings?.numCtx || 2048}
           </Text>
           <Slider
-            min={256}
-            max={8192}
-            step={256}
+            min={1024}
+            max={128000}
+            step={1024}
             value={selectedNode.data.settings?.numCtx || 2048}
             onChange={(value) =>
               updateNodeData(selectedNode.id, {
@@ -320,6 +321,19 @@ const AgentNode = ({ workflowId, selectedNode, updateNodeData }) => {
           />
         </div>
       </div>
+      
+      {/* Conversation History Configuration */}
+      <ConversationHistoryConfig
+        settings={{
+          ...selectedNode.data.settings,
+          nodeType: 'agent'
+        }}
+        updateSettings={(updatedSettings) =>
+          updateNodeData(selectedNode.id, {
+            settings: updatedSettings,
+          })
+        }
+      />
     </div>
   );
 };

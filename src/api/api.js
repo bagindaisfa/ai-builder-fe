@@ -44,10 +44,12 @@ API.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    
+
     // Skip token refresh for login and token refresh endpoints
-    if (originalRequest.url.includes('/auth/login') || 
-        originalRequest.url.includes('/auth/refresh-token')) {
+    if (
+      originalRequest.url.includes('/auth/login') ||
+      originalRequest.url.includes('/auth/refresh-token')
+    ) {
       return Promise.reject(error);
     }
 
@@ -139,10 +141,18 @@ export const getWorkflowVariables = async (workflowUuid, currentNodeId) => {
   }
 };
 
-export const executeWorkflow = (uuid, input, conversation_id = null) => {
+export const executeWorkflow = (
+  uuid,
+  input,
+  conversation_id = null,
+  files = null
+) => {
   const payload = { input };
   if (conversation_id) {
     payload.conversation_id = conversation_id;
+  }
+  if (files) {
+    payload.files = files;
   }
   return API.post(`/studio/workflows/execute/${uuid}`, payload);
 };
@@ -271,5 +281,25 @@ export const createApiContract = (payload) =>
 export const updateApiContract = (id, updates) =>
   API.patch(`/api/contracts/${id}`, updates);
 export const deleteApiContract = (id) => API.delete(`/api/contracts/${id}`);
+export const fileUpload = (uuid, formData, headers = {}) => {
+  // Don't set Content-Type header - let the browser set it with the correct boundary
+  const config = {
+    headers: {
+      ...headers,
+      'Content-Type': 'multipart/form-data',
+    },
+    withCredentials: true,
+  };
+  return API.post(`/file-upload/upload/${uuid}`, formData, config);
+};
+
+// Memory / Conversations
+// List conversations for a workflow with pagination and optional keyword
+export const getConversations = (workflowUuid, params = {}) =>
+  API.get(`/memory/conversations/${workflowUuid}`, { params });
+
+// Get a single conversation's details (messages/history)
+export const getConversation = (conversationId) =>
+  API.get(`/memory/conversation/${conversationId}`);
 
 export default API;

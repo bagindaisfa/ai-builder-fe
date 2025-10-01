@@ -38,7 +38,7 @@ export const nodeTypesConfig = [
         type: 'agent',
         label: 'Agent',
         icon: <SmileOutlined />,
-        color: '#8b5cf6',
+        color: '#e11d48',
       },
     ],
   },

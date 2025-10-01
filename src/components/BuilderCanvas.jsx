@@ -45,13 +45,26 @@ import {
   PartitionOutlined,
   ArrowDownOutlined,
   ArrowRightOutlined,
-  CloseCircleFilled,
+  FileTextOutlined,
+  FileImageOutlined,
+  FilePdfOutlined,
+  FileWordOutlined,
+  FileExcelOutlined,
+  FilePptOutlined,
+  FileZipOutlined,
+  ExpandOutlined,
+  CompressOutlined,
 } from '@ant-design/icons';
 import KnowledgeSelectionModal from './knowledge/KnowledgeSelectionModal';
 import HttpRequestNode from './nodes/HttpRequestNode';
 import { saveAs } from 'file-saver';
 import VariableSelector from './VariableSelector';
-import { getWorkflow, updateWorkflow, executeWorkflow } from '../api/api';
+import {
+  getWorkflow,
+  updateWorkflow,
+  executeWorkflow,
+  fileUpload,
+} from '../api/api';
 import { nodeTypesConfig } from './builderUtils/nodeTypesConfig';
 import { getLayoutedElements } from './builderUtils/getLayoutedElements';
 import { getInitialNodes, getInitialEdges } from './builderUtils/getInitial';
@@ -62,6 +75,11 @@ import LlmNode from './nodes/LlmNode';
 import AnswerNode from './nodes/AnswareNode';
 import KnowledgeRetrieval from './nodes/KnowledgeRetrieval';
 import CodeNode from './nodes/CodeNode';
+import QuestionClassifier from './nodes/QuestionClassifier';
+import IfElseNode from './nodes/IfElseNode';
+import IterationNode from './nodes/IterationNode';
+import LoopNode from './nodes/LoopNode';
+import TemplateNode from './nodes/TemplateNode';
 
 const { Title, Text } = Typography;
 
@@ -75,7 +93,11 @@ export default function BuilderCanvasWrapper({ initialData, workflowId }) {
 }
 
 // Inner component with access to React Flow context
-function BuilderCanvasContent({ initialData, workflowId }) {
+function BuilderCanvasContent({
+  initialData,
+  workflowId,
+  onFilesUploaded = () => {},
+}) {
   const { isDarkMode } = useTheme();
   const [saveWorkflowLoading, setSaveWorkflowLoading] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
@@ -84,8 +106,10 @@ function BuilderCanvasContent({ initialData, workflowId }) {
   const initialNodes = getInitialNodes(initialData);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewExpanded, setPreviewExpanded] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [nodeSettingsVisible, setNodeSettingsVisible] = useState(false);
+  const [nodeSettingsExpanded, setNodeSettingsExpanded] = useState(false);
   const [selectedNode, setSelectedNode] = useState(null);
   const [knowledgeModalVisible, setKnowledgeModalVisible] = useState(false);
   const [testInput, setTestInput] = useState('');
@@ -93,6 +117,9 @@ function BuilderCanvasContent({ initialData, workflowId }) {
   const [isRunning, setIsRunning] = useState(false);
   const [conversationId, setConversationId] = useState(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
 
   const [edges, setEdges, onEdgesChange] = useEdgesState(
     getInitialEdges(initialData, initialNodes, isDarkMode)
@@ -165,14 +192,6 @@ function BuilderCanvasContent({ initialData, workflowId }) {
       //   try {
       //     const response = await getWorkflow(workflowId);
       //     if (response.data && response.data.name) {
-      //       setWorkflowName(response.data.name);
-      //     }
-      //     setActiveWorkflowId(workflowId);
-      //   } catch (error) {
-      //     console.error('Error fetching workflow:', error);
-      //   }
-      // };
-
       fetchWorkflow();
     }
   }, [workflowId, normalizeEdges, setNodes, setEdges]);
@@ -191,6 +210,194 @@ function BuilderCanvasContent({ initialData, workflowId }) {
     enableAnimations: true,
     layoutDirection: 'LR', // 'TB' (top to bottom), 'LR' (left to right)
   });
+
+  const handleFileUpload = async (event) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    // Validate files - allow text files and images
+    const validTextTypes = ['text/plain'];
+    const validImageTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'image/bmp',
+    ];
+    const validTextExtensions = ['.txt', '.text'];
+    const validImageExtensions = [
+      '.jpg',
+      '.jpeg',
+      '.png',
+      '.gif',
+      '.webp',
+      '.bmp',
+    ];
+
+    // Combine valid types and extensions
+    const validTypes = [...validTextTypes, ...validImageTypes];
+    const validExtensions = [...validTextExtensions, ...validImageExtensions];
+
+    const invalidFiles = Array.from(files).filter((file) => {
+      const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+      return (
+        !validTypes.includes(file.type) && !validExtensions.includes(fileExt)
+      );
+    });
+
+    if (invalidFiles.length > 0) {
+      messageApi.error(
+        `Only text and image files are supported. ${invalidFiles.length} invalid file(s) rejected.`
+      );
+
+      // Reset the file input
+      if (event.target) {
+        event.target.value = '';
+      }
+      return;
+    }
+
+    setIsUploading(true);
+
+    // Define onFilesUploaded with a default empty function if not provided
+    const uploadCallback = onFilesUploaded || (() => {});
+
+    try {
+      const formData = new FormData();
+
+      // Append each file to the FormData object
+      Array.from(files).forEach((file, index) => {
+        formData.append('files', file);
+      });
+
+      // Get the authentication token if available
+      const token = localStorage.getItem('token');
+      const headers = {};
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      // Show uploading message
+      const hideLoading = message.loading({
+        content: `Uploading ${files.length} file(s)...`,
+        key: 'upload-progress',
+        duration: 0,
+      });
+
+      try {
+        const response = await fileUpload(workflowId, formData, headers);
+        const result = response.data;
+
+        // Function to get icon based on file extension
+        const getFileIcon = (filename) => {
+          const extension = filename.split('.').pop().toLowerCase();
+          const iconStyle = { marginRight: 8 };
+
+          const iconMap = {
+            // Images
+            jpg: (
+              <FileImageOutlined style={{ color: '#ff4d4f', ...iconStyle }} />
+            ),
+            jpeg: (
+              <FileImageOutlined style={{ color: '#ff4d4f', ...iconStyle }} />
+            ),
+            png: (
+              <FileImageOutlined style={{ color: '#ff4d4f', ...iconStyle }} />
+            ),
+            gif: (
+              <FileImageOutlined style={{ color: '#ff4d4f', ...iconStyle }} />
+            ),
+            webp: (
+              <FileImageOutlined style={{ color: '#ff4d4f', ...iconStyle }} />
+            ),
+
+            // Documents
+            pdf: <FilePdfOutlined style={{ color: '#ff4d4f', ...iconStyle }} />,
+            doc: (
+              <FileWordOutlined style={{ color: '#1890ff', ...iconStyle }} />
+            ),
+            docx: (
+              <FileWordOutlined style={{ color: '#1890ff', ...iconStyle }} />
+            ),
+            xls: (
+              <FileExcelOutlined style={{ color: '#52c41a', ...iconStyle }} />
+            ),
+            xlsx: (
+              <FileExcelOutlined style={{ color: '#52c41a', ...iconStyle }} />
+            ),
+            ppt: <FilePptOutlined style={{ color: '#ffa940', ...iconStyle }} />,
+            pptx: (
+              <FilePptOutlined style={{ color: '#ffa940', ...iconStyle }} />
+            ),
+
+            // Archives
+            zip: <FileZipOutlined style={{ color: '#722ed1', ...iconStyle }} />,
+            rar: <FileZipOutlined style={{ color: '#722ed1', ...iconStyle }} />,
+            '7z': (
+              <FileZipOutlined style={{ color: '#722ed1', ...iconStyle }} />
+            ),
+
+            // Default
+            default: (
+              <FileTextOutlined style={{ color: '#8c8c8c', ...iconStyle }} />
+            ),
+          };
+
+          return iconMap[extension] || iconMap.default;
+        };
+
+        // Process uploaded files with their icons
+        const filesWithIcons = result.files.map((file) => ({
+          ...file,
+          icon: getFileIcon(file.filename || file.name),
+        }));
+
+        console.log('Uploaded files with icons:', filesWithIcons);
+
+        // Reset the file input
+        if (event.target) {
+          event.target.value = '';
+        }
+
+        // Update state with uploaded files including icons
+        setUploadedFiles((prev) => [...prev, ...filesWithIcons]);
+
+        // Update the input field with the file names
+        // setTestInput(
+        //   filesWithIcons.map((f) => f.filename || f.name).join(', ')
+        // );
+
+        return result;
+      } catch (error) {
+        // Show error message
+        const errorMessage =
+          error.response?.data?.message ||
+          error.message ||
+          'Failed to upload files';
+        message.error({
+          content: `Upload failed: ${errorMessage}`,
+          key: 'upload-progress',
+          duration: 5,
+        });
+
+        console.error('File upload error:', error);
+        throw error;
+      } finally {
+        // Ensure loading message is cleared in case of any errors
+        message.destroy('upload-progress');
+      }
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      message.error(
+        'Failed to upload files: ' + (error.message || 'Unknown error')
+      );
+    } finally {
+      setIsUploading(false);
+      // Reset the file input
+      event.target.value = '';
+    }
+  };
 
   const onConnect = useCallback(
     (params) =>
@@ -312,15 +519,16 @@ function BuilderCanvasContent({ initialData, workflowId }) {
               ...node.data,
               // Ensure all LLM settings are included
               settings: {
-                systemPrompt: node.data.systemPrompt || '',
-                userPrompt: node.data.userPrompt || '',
+                systemPrompt: node.data.settings?.systemPrompt || '',
+                userPrompt: node.data.settings?.userPrompt || '',
                 ollamaBaseUrl:
-                  node.data.ollamaBaseUrl || 'http://localhost:11434',
-                model: node.data.model || 'llama2',
-                temperature: node.data.temperature ?? 0.8,
-                numCtx: node.data.numCtx ?? 2048,
-                streaming: node.data.streaming ?? true,
-                structuredOutput: node.data.structuredOutput || {
+                  node.data.settings?.ollamaBaseUrl || 'http://localhost:11434',
+                model: node.data.settings?.model || 'llama2',
+                temperature: node.data.settings?.temperature ?? 0.8,
+                numCtx: node.data.settings?.numCtx ?? 2048,
+                streaming: node.data.settings?.streaming ?? true,
+                enableMultimodal: node.data.settings?.enableMultimodal ?? false,
+                structuredOutput: node.data.settings?.structuredOutput || {
                   enabled: false,
                   properties: [],
                   description: '',
@@ -328,16 +536,7 @@ function BuilderCanvasContent({ initialData, workflowId }) {
               },
               // Keep all other data properties
               ...Object.keys(node.data).reduce((acc, key) => {
-                if (
-                  ![
-                    'ollamaBaseUrl',
-                    'model',
-                    'temperature',
-                    'numCtx',
-                    'streaming',
-                    'systemPrompt',
-                  ].includes(key)
-                ) {
+                if (!['settings', 'structuredOutput'].includes(key)) {
                   acc[key] = node.data[key];
                 }
                 return acc;
@@ -375,25 +574,58 @@ function BuilderCanvasContent({ initialData, workflowId }) {
   };
 
   const runWorkflowTest = async () => {
-    if (!testInput.trim()) return;
+    // Allow running with just files, without text input
+    if (!testInput.trim() && uploadedFiles.length === 0) {
+      messageApi.warning('Please enter a test message or upload a file');
+      return;
+    }
 
     setIsRunning(true);
+    // Create user message with file information if files are uploaded
+    let messageContent = testInput;
+
+    // If there are files, add file information to the message
+    if (uploadedFiles.length > 0) {
+      const fileNames = uploadedFiles
+        .map((file) => file.filename || file.original_filename)
+        .join(', ');
+      if (messageContent.trim()) {
+        messageContent += '\n\nFiles: ' + fileNames;
+      } else {
+        messageContent = 'Files: ' + fileNames;
+      }
+    }
+
     const userMessage = {
       id: Date.now(),
       type: 'user',
-      content: testInput,
+      content: messageContent,
       timestamp: new Date().toLocaleTimeString(),
+      files: uploadedFiles.length > 0 ? [...uploadedFiles] : undefined,
     };
 
     setTestMessages((prev) => [...prev, userMessage]);
     setTestInput('');
 
     try {
+      // Prepare files data for the API
+      const filesData = uploadedFiles.map((file) => ({
+        uuid: file.uuid,
+        filename: file.filename,
+        original_filename: file.original_filename || file.filename,
+        path: file.path,
+        url: file.url,
+        size: file.size,
+        extension: file.extension,
+        mime_type: file.mime_type,
+      }));
+
       // Pass the conversation_id if it exists to maintain conversation continuity
       const response = await executeWorkflow(
         workflowId,
         testInput,
-        conversationId
+        conversationId,
+        filesData.length > 0 ? filesData : null
       );
 
       // Extract the conversation_id from the response and store it for future requests
@@ -462,6 +694,113 @@ function BuilderCanvasContent({ initialData, workflowId }) {
       layoutDirection: 'TB',
     });
   };
+
+  // Auto-sync edges for nodes that define Next Step mappings (ifelse, classifier)
+  useEffect(() => {
+    // Build desired auto edges from node settings
+    const desired = [];
+    nodes.forEach((node) => {
+      const s = node.data?.settings || {};
+      if (node.data?.nodeType === 'ifelse') {
+        if (s.nextSteps?.if) {
+          desired.push({
+            id: `auto-${node.id}-IF-${s.nextSteps.if}`,
+            source: node.id,
+            target: s.nextSteps.if,
+            branch: 'IF',
+          });
+        }
+        if (Array.isArray(s.nextSteps?.elif)) {
+          s.nextSteps.elif.forEach((targetId, idx) => {
+            if (targetId) {
+              desired.push({
+                id: `auto-${node.id}-ELIF${idx + 1}-${targetId}`,
+                source: node.id,
+                target: targetId,
+                branch: `ELIF ${idx + 1}`,
+              });
+            }
+          });
+        }
+        if (s.nextSteps?.else) {
+          desired.push({
+            id: `auto-${node.id}-ELSE-${s.nextSteps.else}`,
+            source: node.id,
+            target: s.nextSteps.else,
+            branch: 'ELSE',
+          });
+        }
+      }
+      if (node.data?.nodeType === 'classifier') {
+        const ns = s.nextSteps || {};
+        Object.entries(ns).forEach(([className, targetId]) => {
+          if (targetId) {
+            desired.push({
+              id: `auto-${node.id}-CLASS-${className}-${targetId}`,
+              source: node.id,
+              target: targetId,
+              branch: `CLASS ${className}`,
+            });
+          }
+        });
+      }
+    });
+
+    // Compute sets to add/remove
+    const desiredKey = (e) => `${e.source}->${e.target}->${e.branch}`;
+    const desiredSet = new Set(desired.map(desiredKey));
+
+    const currentAuto = edges.filter((e) => e.data?.autoGenerated);
+    const currentAutoSet = new Set(
+      currentAuto.map((e) => `${e.source}->${e.target}->${e.data.branch}`)
+    );
+
+    const toAdd = desired.filter((d) => !currentAutoSet.has(desiredKey(d)));
+    const toRemoveKeys = [...currentAutoSet].filter((k) => !desiredSet.has(k));
+
+    if (toAdd.length === 0 && toRemoveKeys.length === 0) return;
+
+    setEdges((prev) => {
+      // Remove edges that are no longer desired
+      const filtered = prev.filter((e) => {
+        if (!e.data?.autoGenerated) return true;
+        const key = `${e.source}->${e.target}->${e.data.branch}`;
+        return !toRemoveKeys.includes(key);
+      });
+
+      // Add new desired edges
+      const newOnes = toAdd.map((d) => ({
+        id: d.id,
+        source: d.source,
+        target: d.target,
+        type: 'custom',
+        animated: settings.enableAnimations,
+        style: {
+          stroke: isDarkMode ? '#94a3b8' : '#64748b',
+          strokeWidth: 2,
+          opacity: 0.9,
+        },
+        markerEnd: {
+          type: 'arrowclosed',
+          color: isDarkMode ? '#94a3b8' : '#64748b',
+        },
+        data: {
+          onDelete: handleDeleteEdge,
+          autoGenerated: true,
+          branch: d.branch,
+        },
+      }));
+
+      return [...filtered, ...newOnes];
+    });
+  }, [
+    nodes,
+    edges,
+    isDarkMode,
+    settings.enableAnimations,
+    handleDeleteEdge,
+    setEdges,
+  ]);
 
   // Auto-layout function
   const onLayout = useCallback(
@@ -606,13 +945,15 @@ function BuilderCanvasContent({ initialData, workflowId }) {
           {/* Canvas area */}
           <div
             style={{
-              flex: 1,
+              flex: previewExpanded && previewVisible ? 0 : 1,
               position: 'relative',
               height: '100%',
               minHeight: '500px',
               background: isDarkMode ? '#1a202c' : '#f8fafc',
-              transition: 'all 0.3s ease',
+              transition: 'all 0.3s ease-in-out',
               overflow: 'hidden',
+              width: previewExpanded && previewVisible ? '0' : 'auto',
+              opacity: previewExpanded && previewVisible ? 0 : 1,
             }}
           >
             <ReactFlow
@@ -826,6 +1167,11 @@ function BuilderCanvasContent({ initialData, workflowId }) {
             testInput={testInput}
             setTestInput={setTestInput}
             runWorkflowTest={runWorkflowTest}
+            handleFileUpload={handleFileUpload}
+            isUploading={isUploading}
+            uploadedFiles={uploadedFiles}
+            setUploadedFiles={setUploadedFiles}
+            onExpandChange={setPreviewExpanded}
           />
         </div>
 
@@ -1340,7 +1686,7 @@ function BuilderCanvasContent({ initialData, workflowId }) {
                             : selectedNode.data.nodeType === 'answer'
                             ? '#f59e0b'
                             : selectedNode.data.nodeType === 'agent'
-                            ? '#8b5cf6'
+                            ? '#e11d48'
                             : selectedNode.data.nodeType === 'classifier'
                             ? '#10b981'
                             : selectedNode.data.nodeType === 'ifelse'
@@ -1377,29 +1723,57 @@ function BuilderCanvasContent({ initialData, workflowId }) {
                   </>
                 )}
               </div>
-              <Button
-                type="primary"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={handleDeleteNode}
-                style={{
-                  marginLeft: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontWeight: 500,
-                  boxShadow: '0 2px 0 rgba(255, 77, 79, 0.2)',
-                }}
+              <div
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
               >
-                Delete
-              </Button>
+                <Tooltip
+                  title={
+                    nodeSettingsExpanded
+                      ? 'Restore panel size'
+                      : 'Expand panel to full width'
+                  }
+                >
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={
+                      nodeSettingsExpanded ? (
+                        <CompressOutlined />
+                      ) : (
+                        <ExpandOutlined />
+                      )
+                    }
+                    onClick={() =>
+                      setNodeSettingsExpanded(!nodeSettingsExpanded)
+                    }
+                  />
+                </Tooltip>
+                <Button
+                  type="primary"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={handleDeleteNode}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontWeight: 500,
+                    boxShadow: '0 2px 0 rgba(255, 77, 79, 0.2)',
+                  }}
+                >
+                  Delete
+                </Button>
+              </div>
             </div>
           }
           placement="right"
           onClose={() => setNodeSettingsVisible(false)}
           open={nodeSettingsVisible}
-          width={600}
-          styles={{ body: { padding: '16px' } }}
+          width={nodeSettingsExpanded ? '90%' : 600}
+          styles={{
+            body: { padding: '16px' },
+            wrapper: { transition: 'width 0.3s ease-in-out' },
+          }}
         >
           {selectedNode && (
             <div
@@ -1468,6 +1842,15 @@ function BuilderCanvasContent({ initialData, workflowId }) {
                 />
               )}
 
+              {selectedNode.data.nodeType === 'classifier' && (
+                <QuestionClassifier
+                  workflowId={workflowId}
+                  selectedNode={selectedNode}
+                  updateNodeData={updateNodeData}
+                  availableNodes={nodes.filter((n) => n.id !== selectedNode.id)}
+                />
+              )}
+
               {selectedNode.data.nodeType === 'agent' && (
                 <AgentNode
                   workflowId={workflowId}
@@ -1506,6 +1889,38 @@ function BuilderCanvasContent({ initialData, workflowId }) {
                 <CodeNode
                   selectedNode={selectedNode}
                   updateNodeData={updateNodeData}
+                />
+              )}
+              {selectedNode.data.nodeType === 'ifelse' && (
+                <IfElseNode
+                  workflowId={workflowId}
+                  selectedNode={selectedNode}
+                  updateNodeData={updateNodeData}
+                  availableNodes={nodes.filter((n) => n.id !== selectedNode.id)}
+                />
+              )}
+              {selectedNode.data.nodeType === 'iteration' && (
+                <IterationNode
+                  workflowId={workflowId}
+                  selectedNode={selectedNode}
+                  updateNodeData={updateNodeData}
+                  availableNodes={nodes.filter((n) => n.id !== selectedNode.id)}
+                />
+              )}
+              {selectedNode.data.nodeType === 'loop' && (
+                <LoopNode
+                  workflowId={workflowId}
+                  selectedNode={selectedNode}
+                  updateNodeData={updateNodeData}
+                  availableNodes={nodes.filter((n) => n.id !== selectedNode.id)}
+                />
+              )}
+              {selectedNode.data.nodeType === 'template' && (
+                <TemplateNode
+                  workflowId={workflowId}
+                  selectedNode={selectedNode}
+                  updateNodeData={updateNodeData}
+                  availableNodes={nodes.filter((n) => n.id !== selectedNode.id)}
                 />
               )}
             </div>
