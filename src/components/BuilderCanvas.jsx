@@ -80,6 +80,11 @@ import IfElseNode from './nodes/IfElseNode';
 import IterationNode from './nodes/IterationNode';
 import LoopNode from './nodes/LoopNode';
 import TemplateNode from './nodes/TemplateNode';
+import VariableAggregator from './nodes/VariableAggregator';
+import DocExtractor from './nodes/DocExtractor';
+import VariableAssigner from './nodes/VariableAssigner';
+import ParameterExtractor from './nodes/ParameterExtractor';
+import ListOperator from './nodes/ListOperator';
 
 const { Title, Text } = Typography;
 
@@ -1917,6 +1922,46 @@ function BuilderCanvasContent({
               )}
               {selectedNode.data.nodeType === 'template' && (
                 <TemplateNode
+                  workflowId={workflowId}
+                  selectedNode={selectedNode}
+                  updateNodeData={updateNodeData}
+                  availableNodes={nodes.filter((n) => n.id !== selectedNode.id)}
+                />
+              )}
+              {selectedNode.data.nodeType === 'variable_aggregator' && (
+                <VariableAggregator
+                  workflowId={workflowId}
+                  selectedNode={selectedNode}
+                  updateNodeData={updateNodeData}
+                  availableNodes={nodes.filter((n) => n.id !== selectedNode.id)}
+                />
+              )}
+              {selectedNode.data.nodeType === 'doc_extractor' && (
+                <DocExtractor
+                  workflowId={workflowId}
+                  selectedNode={selectedNode}
+                  updateNodeData={updateNodeData}
+                  availableNodes={nodes.filter((n) => n.id !== selectedNode.id)}
+                />
+              )}
+              {selectedNode.data.nodeType === 'variable_assigner' && (
+                <VariableAssigner
+                  workflowId={workflowId}
+                  selectedNode={selectedNode}
+                  updateNodeData={updateNodeData}
+                  availableNodes={nodes.filter((n) => n.id !== selectedNode.id)}
+                />
+              )}
+              {selectedNode.data.nodeType === 'parameter_extractor' && (
+                <ParameterExtractor
+                  workflowId={workflowId}
+                  selectedNode={selectedNode}
+                  updateNodeData={updateNodeData}
+                  availableNodes={nodes.filter((n) => n.id !== selectedNode.id)}
+                />
+              )}
+              {selectedNode.data.nodeType === 'list_operator' && (
+                <ListOperator
                   workflowId={workflowId}
                   selectedNode={selectedNode}
                   updateNodeData={updateNodeData}
