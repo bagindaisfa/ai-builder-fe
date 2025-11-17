@@ -1,0 +1,18 @@
+### get knowledge pageable
+GET http://localhost:5010/api/v1/knowledge/paginated?page=1&per_page=10&keyword=ivan http/1.1
+
+
+### Knowledge retrieve test API
+POST http://localhost:5010/api/v1/knowledge/retrieval-test/9c4c5aa8-e647-47fb-9fa1-49423eb84a14 http/1.1
+Content-Type: application/json
+
+{
+    "query": "run time",
+    "limit": 5
+}
+
+### get document details
+GET http://localhost:5010/api/v1/knowledge/document/details/07b395cd-f896-46d8-8fa9-544a1f3aacca?page=1&per_page=10&keyword=Language http/1.1
+
+### get knowledge retrieve history
+GET http://localhost:5010/api/v1/knowledge/retrieval/history/9c4c5aa8-e647-47fb-9fa1-49423eb84a14?page=1&per_page=10&keyword= http/1.1
